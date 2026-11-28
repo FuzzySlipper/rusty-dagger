@@ -93,7 +93,7 @@ internal interface IDaggerfallExpeditionSurroundings
     void PersistentBandArrived(DaggerfallPersistentOverlandBand band, long second) { }
 
     /// <summary>A persistent <see cref="ActorLocationKind.OnOverlandBand"/> party was retired off-screen (e.g. off-screen clash or raid resolution).</summary>
-    void PersistentBandRetiredOffScreen(string bandId, long second) { }
+    void PersistentBandRetiredOffScreen(string bandId, long second, DaggerfallWorldConditionToken? raidedUnder = null) { }
 
     /// <summary>Active world-condition tokens affecting <paramref name="region"/> (stubbed/authored or B2 board-driven).</summary>
     IReadOnlyList<DaggerfallWorldConditionToken> WorldConditions(int region) => [];
@@ -120,6 +120,9 @@ internal sealed record DaggerfallExpeditionBandView(int Id, double X, double Y, 
 
     /// <summary>A persistent party out on the road beyond the party's reach, not on the map (#11178).</summary>
     internal bool OnRoad { get; init; }
+
+    /// <summary>The colour of the arms the band flies, as <c>#rrggbb</c>, if it flies any (#11180).</summary>
+    internal string? Banner { get; init; }
 
     /// <summary>Non-null when this band was staged in response to a <see cref="DaggerfallWorldConditionToken"/>.</summary>
     internal string? ConditionTokenId { get; init; }
@@ -199,7 +202,8 @@ internal sealed record DaggerfallPersistentBandSave(
     DaggerfallPersistentBandClashSave? ActiveClash = null,
     bool OnRoad = false,
     int RoadSegment = 0,
-    long? HeldUntilSecond = null)
+    long? HeldUntilSecond = null,
+    string? Banner = null)
 {
     internal DaggerfallPersistentBandSave Validate()
     {
@@ -1054,6 +1058,7 @@ internal sealed class DaggerfallExpedition
                 {
                     DaggerfallBandKind.Caravan => "Caravan",
                     DaggerfallBandKind.Courier => "Courier",
+                    DaggerfallBandKind.Convoy => "Grain Convoy",
                     DaggerfallBandKind.Patrol => band.Hostile ? "Hostile Patrol" : "Patrol",
                     DaggerfallBandKind.Hostile => "Hostile Squad",
                     DaggerfallBandKind.Clash => "Faction Clash",
@@ -1090,6 +1095,12 @@ internal sealed class DaggerfallExpedition
                 ? $"Regional courier bound for {destName}."
                 : "Regional courier riding between settlements.";
         }
+        else if (band.Kind == DaggerfallBandKind.Convoy)
+        {
+            detail = destName is not null
+                ? $"Wagons of {band.Faction ?? "a court"}'s grain bound for {destName}, under guard."
+                : $"Wagons of {band.Faction ?? "a court"}'s grain on the road, under guard.";
+        }
         else if (band.Camp)
         {
             detail = $"{category} camped by the road.";
@@ -1106,6 +1117,7 @@ internal sealed class DaggerfallExpedition
             Mobile = band.Mobile,
             PersistentBandId = band.BandId,
             OnRoad = band.OnRoad,
+            Banner = band.Banner,
             Category = category,
             Faction = band.Faction,
             OriginName = originName,
@@ -1410,7 +1422,7 @@ internal sealed class DaggerfallExpedition
     }
 
     private static bool IsRaidableTraveller(DaggerfallPersistentOverlandBand band) =>
-        !band.Hostile && band.Kind is DaggerfallBandKind.Caravan or DaggerfallBandKind.Travellers or DaggerfallBandKind.Courier;
+        !band.Hostile && band.Kind is DaggerfallBandKind.Caravan or DaggerfallBandKind.Travellers or DaggerfallBandKind.Courier or DaggerfallBandKind.Convoy;
 
     /// <summary>
     /// Puts each band where it belongs for the party at <paramref name="party"/>: a band on the road comes onto the map,
@@ -1455,17 +1467,19 @@ internal sealed class DaggerfallExpedition
         while (going.TryDequeue(out (DaggerfallPersistentOverlandBand Band, long From) next))
         {
             DaggerfallPersistentOverlandBand band = next.Band;
+            DaggerfallWorldConditionToken? raidedUnder = null;
             (DaggerfallRoadStep step, long at) = band.StepOnRoad(next.From, to, _policy, road.SegmentPixels, delaySeconds, (segment, second) =>
             {
-                DaggerfallRoadMeeting meeting = JudgeRoad(band, segment, second);
+                (DaggerfallRoadMeeting meeting, DaggerfallWorldConditionToken? under) = JudgeRoad(band, segment, second);
                 if (meeting == DaggerfallRoadMeeting.Delayed) _world.PersistentBandDelayed(band, delaySeconds);
+                raidedUnder = under;
                 return meeting;
             });
             if (step == DaggerfallRoadStep.Travelling) continue;
             _persistentBands.Remove(band);
             if (step == DaggerfallRoadStep.Raided)
             {
-                _world.PersistentBandRetiredOffScreen(band.BandId, at);
+                _world.PersistentBandRetiredOffScreen(band.BandId, at, raidedUnder);
                 continue;
             }
             HashSet<DaggerfallPersistentOverlandBand> before = [.. _persistentBands];
@@ -1482,35 +1496,38 @@ internal sealed class DaggerfallExpedition
     /// What meets <paramref name="band"/> setting out along road segment <paramref name="segment"/> at absolute second
     /// <paramref name="second"/>: the road's own chances, each hazard held then in the region it stands in by its severity,
     /// and a hostile band on the map within reach; one keyed roll by the band, its route and the segment decides. A band
-    /// that cannot be raided (a patrol) is only delayed.
+    /// that cannot be raided (a patrol) is only delayed. A raid names the hazard's token it fell in, read in that order
+    /// (none for the road's own or a hostile band's), so a board convoy can tell whose soldiers took it (#11180).
     /// </summary>
-    private DaggerfallRoadMeeting JudgeRoad(DaggerfallPersistentOverlandBand band, int segment, long second)
+    private (DaggerfallRoadMeeting Meeting, DaggerfallWorldConditionToken? Under) JudgeRoad(DaggerfallPersistentOverlandBand band, int segment, long second)
     {
         DaggerfallRoadTuning road = _tuning.Road;
-        int raid = road.Wilds.Raid, delay = road.Wilds.Delay;
+        List<(DaggerfallRoadChances Chances, int Severity, DaggerfallWorldConditionToken? Token)> held = [(road.Wilds, 1, null)];
         int region = _policy.RegionAt(new((int)Math.Floor(band.X), (int)Math.Floor(band.Y)));
         if (region >= 0)
         {
             int day = checked((int)(second / DaggerfallCalendar.SecondsPerDay));
-            foreach (IGrouping<DaggerfallRoadHazard, int> held in _world.WorldConditionsOn(region, day)
-                .Select(token => (Hazard: DaggerfallRoadTuning.HazardOf(token), token.Severity))
-                .Where(entry => entry.Hazard is not null)
-                .GroupBy(entry => entry.Hazard!.Value, entry => entry.Severity))
+            foreach (IGrouping<DaggerfallRoadHazard, DaggerfallWorldConditionToken> hazard in _world.WorldConditionsOn(region, day)
+                .Where(token => DaggerfallRoadTuning.HazardOf(token) is not null)
+                .GroupBy(token => DaggerfallRoadTuning.HazardOf(token)!.Value)
+                .OrderBy(group => group.Key))
             {
-                DaggerfallRoadChances chances = road.Hazards[held.Key];
-                raid += chances.Raid * held.Max();
-                delay += chances.Delay * held.Max();
+                DaggerfallWorldConditionToken strongest = hazard.OrderByDescending(token => token.Severity).ThenBy(token => token.TokenId, StringComparer.Ordinal).First();
+                held.Add((road.Hazards[hazard.Key], strongest.Severity, strongest));
             }
         }
         if (_persistentBands.Any(other => other.Hostile && !other.OnRoad && other.Distance(band.X, band.Y) <= road.HostileReach))
-        {
-            raid += road.HostileBand.Raid;
-            delay += road.HostileBand.Delay;
-        }
-        if (!IsRaidableTraveller(band)) (raid, delay) = (0, raid + delay);
+            held.Add((road.HostileBand, 1, null));
+        int raid = held.Sum(entry => entry.Chances.Raid * entry.Severity), delay = held.Sum(entry => entry.Chances.Delay * entry.Severity);
+        bool raidable = IsRaidableTraveller(band);
+        if (!raidable) (raid, delay) = (0, raid + delay);
         int roll = _world.Roll(string.Create(CultureInfo.InvariantCulture,
             $"road:{band.BandId}:{band.RouteOrigin?.X}:{band.RouteOrigin?.Y}:{segment}"), 1, 100);
-        return roll <= raid ? DaggerfallRoadMeeting.Raided : roll <= raid + delay ? DaggerfallRoadMeeting.Delayed : DaggerfallRoadMeeting.Clear;
+        if (roll > raid) return (roll <= raid + delay ? DaggerfallRoadMeeting.Delayed : DaggerfallRoadMeeting.Clear, null);
+        int reach = 0;
+        foreach ((DaggerfallRoadChances chances, int severity, DaggerfallWorldConditionToken? token) in held)
+            if (roll <= (reach += chances.Raid * severity)) return (DaggerfallRoadMeeting.Raided, token);
+        return (DaggerfallRoadMeeting.Raided, null);
     }
 
     /// <summary>Whether a delay on the road still holds <paramref name="band"/> at absolute second <paramref name="now"/>; one that has run out is cleared.</summary>

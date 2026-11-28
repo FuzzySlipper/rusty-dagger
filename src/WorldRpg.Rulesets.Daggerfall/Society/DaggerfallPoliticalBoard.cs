@@ -96,6 +96,9 @@ internal sealed class DaggerfallPoliticalBoard
     private readonly Board _board;
     private readonly DaggerfallPoliticalNews _news;
     private readonly DaggerfallCourierDispatches? _couriers;
+    private readonly DaggerfallRationConvoys? _convoys;
+    private readonly Func<string, bool> _bandOnTheMap;
+    private readonly Func<long, bool> _riderDied;
     private readonly IReadOnlyList<DaggerfallSiteRecord> _sites;
     private DaggerfallOfficeLedger? _officeLedger;
     private readonly Dictionary<string, DaggerfallSiteRecord?> _towns = new(StringComparer.Ordinal);
@@ -115,8 +118,12 @@ internal sealed class DaggerfallPoliticalBoard
     internal DaggerfallPoliticalBoard(DaggerfallPoliticalCanon canon, DaggerfallBoardSeatSet seats, DaggerfallRegionLiege liege,
         Func<string, DaggerfallSeatLeaderPersona> seatPersona, DaggerfallWorldConditions conditions, IReadOnlyList<DaggerfallSiteRecord> sites,
         DaggerfallCourierDispatches? couriers, long day, DaggerfallPoliticalBoardSave? saved,
-        DaggerfallOfficeLedger? officeLedger = null)
+        DaggerfallOfficeLedger? officeLedger = null, DaggerfallRationConvoys? convoys = null, Func<string, bool>? bandOnTheMap = null,
+        Func<long, bool>? riderDied = null)
     {
+        _convoys = convoys;
+        _bandOnTheMap = bandOnTheMap ?? (_ => false);
+        _riderDied = riderDied ?? (_ => false);
         _canon = canon;
         _seats = seats;
         _liege = liege;
@@ -151,6 +158,7 @@ internal sealed class DaggerfallPoliticalBoard
         Rebuild();
         conditions.BindExternalSource(TokensFor);
         couriers?.BindBoardMoveCallback(CourierSettled);
+        convoys?.BindBoard(_board.Queue);
     }
 
     /// <summary>Binds the office ledger so weekly board holder, regency, and conquest changes write through <see cref="DaggerfallOfficeLedger.OfficeChanged"/>.</summary>
@@ -199,6 +207,7 @@ internal sealed class DaggerfallPoliticalBoard
             foreach (DaggerfallConditionCounterplayRecord record in drainCounterplay())
                 if (Eased(record) is { } eased) _board.Queue(eased);
             DelayCouriersOnTheRoad();
+            SettleMetConvoys();
             TurnTrace trace = BoardTurn.Play(_board);
             _lastTurnDay += DaysPerWeek;
             _occupations.RemoveAll(occupation => _lastTurnDay >= occupation.StartedDay + OccupationWeeks * DaysPerWeek);
@@ -211,6 +220,7 @@ internal sealed class DaggerfallPoliticalBoard
                     news.Add(new($"governor:{occupation.Region}:{occupation.StartedDay}", headline, body, town, _lastTurnDay * MinutesPerDay, Faction(occupation.Seat)));
                 }
             SendCouriers(trace);
+            _ = SendConvoys();
             _recentTurns.Add(trace);
             if (_recentTurns.Count > RecentTurnsKept) _recentTurns.RemoveAt(0);
             news.AddRange(_news.Of(trace, warsBefore, _lastTurnDay * MinutesPerDay));
@@ -535,6 +545,37 @@ internal sealed class DaggerfallPoliticalBoard
             _couriers.StageDispatch(move.Id, seat.Id, move.Card.Id, $"{seat.Name}: {move.Card.Name}, for {aim}", origin, destination,
                 minute, checked((int)_lastTurnDay), Faction(seat.Id), Faction(targetSeat));
         }
+    }
+
+    /// <summary>
+    /// Sends each grain term of each agreement in force its week's convoy (#11180), from the chief town of its source region
+    /// to the chief town of the region its ration goes to.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallRationConvoySave> SendConvoys()
+    {
+        if (_convoys is null) return [];
+        List<DaggerfallRationConvoySave> sent = [];
+        foreach (Agreement deal in _board.Agreements)
+            foreach (string giver in new[] { deal.Proposer, deal.Partner })
+            {
+                if (deal.GivenBy(giver).Source is not { } source || Trade.RationDestination(_board, deal, giver) is not { } bound
+                    || Town(source) is not { } origin || Town(bound.Id) is not { } destination) continue;
+                if (_convoys.Dispatch(deal.Id, giver, _board.Seat(giver).Name, Faction(giver), deal.Other(giver), origin, destination, _board.Turn) is { } convoy)
+                    sent.Add(convoy);
+            }
+        return sent;
+    }
+
+    /// <summary>
+    /// Settles, before the Sunday's turn, each convoy whose band has left the map without arriving or being lost on it: one
+    /// the player met and its people walked off from. One whose people any died of is a loss; any other came through.
+    /// </summary>
+    private void SettleMetConvoys()
+    {
+        if (_convoys is null) return;
+        foreach (DaggerfallRationConvoySave convoy in _convoys.All.Where(convoy => !_bandOnTheMap(convoy.BandId)).ToArray())
+            if (convoy.Riders.Any(_riderDied)) _ = _convoys.OnBandLost(convoy.BandId, raidedUnder: null);
+            else _ = _convoys.OnBandArrived(convoy.BandId);
     }
 
     /// <summary>Delays a week each move due this coming Sunday whose courier has not reached its door.</summary>

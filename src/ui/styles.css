@@ -528,6 +528,7 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-expedition-label[data-kind="band"], .dagger-expedition-label[data-kind="camp"] { z-index: 4; color: #ffd2a0; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
 .dagger-expedition-label[data-kind="caravan"] { z-index: 4; color: #f2cf78; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
 .dagger-expedition-label[data-kind="courier"] { z-index: 4; color: #8ad8f0; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
+.dagger-expedition-label[data-kind="convoy"] { z-index: 4; color: #eadca8; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
 .dagger-expedition-label[data-kind="patrol"] { z-index: 4; color: #9ebef5; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
 .dagger-expedition-label[data-kind="hostile"], .dagger-expedition-label[data-kind="chase"] { z-index: 4; color: #ff9a6a; font-size: .78rem; border: 1px solid rgb(255 96 76 / .55); transform: translate(-50%, calc(-100% - 66px)); }
 .dagger-expedition-label[data-kind="clash"] { z-index: 4; color: #ffb357; font-size: .8rem; border: 1px solid rgb(255 152 64 / .65); transform: translate(-50%, calc(-100% - 66px)); }
@@ -585,6 +586,7 @@ dialog.dagger-quests:not([open]) { display: none; }
   background: rgb(18 12 6 / .65); color: #f2e3ba; font: 700 .7rem var(--font-label); letter-spacing: .03em; vertical-align: baseline; }
 .dagger-expedition-band-badge[data-kind="caravan"] { border-color: #d49a38; color: #f2cf78; }
 .dagger-expedition-band-badge[data-kind="courier"] { border-color: #4da6c8; color: #8ad8f0; }
+.dagger-expedition-band-badge[data-kind="convoy"] { border-color: #c9b06a; color: #eadca8; }
 .dagger-expedition-band-badge[data-kind="patrol"] { border-color: #4668a8; color: #9ebef5; }
 .dagger-expedition-band-badge[data-kind="hostile"], .dagger-expedition-band-badge[data-kind="bandits"] { border-color: #c94430; color: #ff9a6a; }
 .dagger-expedition-band-badge[data-kind="clash"] { border-color: #e07a24; color: #ffb357; }

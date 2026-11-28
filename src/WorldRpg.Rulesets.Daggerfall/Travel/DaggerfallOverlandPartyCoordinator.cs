@@ -191,7 +191,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         bool hostile = false,
         int? mobile = null,
         string? faction = null,
-        DaggerfallSiteId? originSite = null)
+        DaggerfallSiteId? originSite = null,
+        string? banner = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
         ArgumentNullException.ThrowIfNull(memberIds);
@@ -242,7 +243,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             RouteOrigin: routeOrigin,
             RouteStep: 0,
             Faction: string.IsNullOrWhiteSpace(faction) ? null : faction.Trim(),
-            OriginSite: originSite is { } os ? new DaggerfallSiteIdSave(os.Region, os.Index) : null);
+            OriginSite: originSite is { } os ? new DaggerfallSiteIdSave(os.Region, os.Index) : null,
+            Banner: banner);
         return _expedition.RegisterPersistentBand(save);
     }
 

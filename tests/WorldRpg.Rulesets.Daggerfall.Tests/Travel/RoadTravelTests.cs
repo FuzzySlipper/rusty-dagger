@@ -84,6 +84,8 @@ public sealed class RoadTravelTests
         raided.RegisterPersistentBand(Caravan("patrol", 150.5, DaggerfallBandKind.Patrol));
         Pass(raided, raidedWorld, 3600, Home);
         Assert.Equal(["caravan"], raidedWorld.Retired);
+        // The raid names the raiders' token it fell in, for a convoy to tell whose soldiers took it (#11180).
+        Assert.Equal(["test:GrainShortage"], raidedWorld.RaidedUnder);
         Assert.Equal("patrol", Assert.Single(raided.PersistentBands).BandId);
         Assert.Equal([("patrol", 6L * 3600)], raidedWorld.Delayed);
     }
@@ -368,7 +370,12 @@ public sealed class RoadTravelTests
         public IReadOnlyList<DaggerfallWorldConditionToken> WorldConditionsOn(int region, int day) =>
             [.. Conditions.Where(token => token.Region == region && token.StartedDay <= day && (token.ExpiresDay is null || day < token.ExpiresDay))];
         public void PersistentBandDelayed(DaggerfallPersistentOverlandBand band, long seconds) => Delayed.Add((band.BandId, seconds));
-        public void PersistentBandRetiredOffScreen(string bandId, long second) => Retired.Add(bandId);
+        public List<string?> RaidedUnder { get; } = [];
+        public void PersistentBandRetiredOffScreen(string bandId, long second, DaggerfallWorldConditionToken? raidedUnder)
+        {
+            Retired.Add(bandId);
+            RaidedUnder.Add(raidedUnder?.TokenId);
+        }
         public void PersistentBandArrived(DaggerfallPersistentOverlandBand band, long second) => Arrived.Add(band.BandId);
     }
 }

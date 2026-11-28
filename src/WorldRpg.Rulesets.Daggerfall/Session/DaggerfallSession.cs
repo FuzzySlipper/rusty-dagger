@@ -969,17 +969,39 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     void IDaggerfallExpeditionSurroundings.PersistentBandArrived(DaggerfallPersistentOverlandBand band, long second)
     {
+        if (RationConvoys.OnBandArrived(band.BandId)) return;                                     // Society: a ration delivered
         if (CourierDispatches.OnOverlandBandArrived(band.BandId, second / DaggerfallCalendar.SecondsPerMinute,
                 checked((int)(second / DaggerfallCalendar.SecondsPerDay))) is not null)
             return;
         _ = OverlandParties.OnPersistentBandArrived(band);
     }
 
-    void IDaggerfallExpeditionSurroundings.PersistentBandRetiredOffScreen(string bandId, long second)
+    void IDaggerfallExpeditionSurroundings.PersistentBandRetiredOffScreen(string bandId, long second, DaggerfallWorldConditionToken? raidedUnder)
     {
+        if (RationConvoys.OnBandLost(bandId, raidedUnder) is { } convoy)                          // Society: a ration missed, its news spreading
+        {
+            RecordConvoyLost(convoy, second, raidedUnder);
+            return;
+        }
         _ = CourierDispatches.OnOverlandBandLost(bandId, second / DaggerfallCalendar.SecondsPerMinute,
             checked((int)(second / DaggerfallCalendar.SecondsPerDay)));
         OverlandParties.RetireBandOffScreen(bandId);
+    }
+
+    /// <summary>
+    /// A ration convoy lost on the road is news from the town it never reached (#11180), naming the soldiers that took it
+    /// when they were a seat's.
+    /// </summary>
+    private void RecordConvoyLost(DaggerfallRationConvoySave convoy, long second, DaggerfallWorldConditionToken? raidedUnder)
+    {
+        if (PoliticalBoard is not { } board || !_site.TryFind(convoy.Destination.Require(), out DaggerfallSiteRecord town)) return;
+        string giver = board.Board.Seat(convoy.Giver).Name, receiver = board.Board.Seat(convoy.Receiver).Name;
+        string? raider = RationConvoys.RaiderOf(raidedUnder, convoy.Giver);
+        string body = raider is null
+            ? $"The wagons of grain {giver} sent to {receiver} never reached {town.Name}. They were taken on the road."
+            : $"The wagons of grain {giver} sent to {receiver} never reached {town.Name}. Soldiers of {board.Board.Seat(raider).Name} took them on the road.";
+        WordSpread.RecordNews($"convoy:{convoy.BandId}:lost", $"Grain Convoy Lost on the Road to {town.Name}", body, town,
+            second / DaggerfallCalendar.SecondsPerMinute, _definitions.BoardSeats.TryGetBySeatId(convoy.Giver, out DaggerfallBoardSeatBinding? seat) ? seat?.OfficeFactionId : null);
     }
 
     void IDaggerfallExpeditionSurroundings.PersistentBandDelayed(DaggerfallPersistentOverlandBand band, long seconds) =>
@@ -1578,6 +1600,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>Sealed board-game courier dispatches that the player can deliver, buy, or intercept.</summary>
     internal DaggerfallCourierDispatches CourierDispatches { get; } = null!;
+
+    /// <summary>The board's weekly rations on the road as convoys (#11180).</summary>
+    internal DaggerfallRationConvoys RationConvoys { get; } = null!;
     internal DaggerfallConditionCounterplay ConditionCounterplay { get; } = null!;
 
     /// <summary>Whom each board region's chief-town offices answer to, and how that takes the player; null without a board.</summary>

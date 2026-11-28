@@ -55,6 +55,64 @@ public sealed class TradeTests
     }
 
     [Fact]
+    public void A_ration_lost_on_the_road_relieves_nothing_that_sunday_and_an_arrival_clears_the_count()
+    {
+        Board board = Hungry();
+        BoardTurn.Play(board);
+        Agreement deal = CoinForGrain(board);
+        Assert.Equal(board.Region("march"), Trade.RationDestination(board, deal, "east"));
+
+        board.Queue(new RationLost(deal.Id, "east"));
+        BoardTurn.Play(board);
+        Assert.Equal(RegionSupply.Cut, board.Region("march").Supply);
+        Assert.Equal(1, Assert.Single(board.Agreements).AsksLost);
+
+        // The next week's convoy arrives: the march is relieved again and the count clears.
+        board.Queue(new RationArrived(deal.Id, "east"));
+        BoardTurn.Play(board);
+        Assert.Equal(RegionSupply.Relieved, board.Region("march").Supply);
+        Assert.Equal(0, Assert.Single(board.Agreements).AsksLost);
+    }
+
+    [Fact]
+    public void Two_rations_lost_in_a_row_end_the_deal_as_route_raided_without_a_default()
+    {
+        Board board = Hungry();
+        BoardTurn.Play(board);
+        Agreement deal = CoinForGrain(board);
+        int relation = board.Relation("west", "east");
+
+        board.Queue(new RationLost(deal.Id, "east"));
+        BoardTurn.Play(board);
+        board.Queue(new RationLost(deal.Id, "east"));
+        TurnTrace trace = BoardTurn.Play(board);
+
+        Assert.Empty(board.Agreements);
+        Assert.Contains(trace.Nudges.SelectMany(nudge => nudge.Changes), change => change.To == Trade.RouteRaided);
+        Assert.Equal(relation, board.Relation("west", "east"));
+        // A nudge for a deal no longer in force is stale.
+        board.Queue(new RationLost(deal.Id, "east"));
+        Assert.Equal(NudgeOutcome.Stale, Assert.Single(BoardTurn.Play(board).Nudges).Outcome);
+    }
+
+    [Fact]
+    public void A_ration_lost_to_a_seats_soldiers_costs_that_seat_the_givers_regard()
+    {
+        Board board = Hungry();
+        BoardTurn.Play(board);
+        Agreement deal = CoinForGrain(board);
+        // The granary board has only the two crowns: West's own soldiers raid the grain East sends it.
+        string raider = "west";
+        int before = board.Relation("east", raider);
+
+        board.Queue(new RationLost(deal.Id, "east", RaidedBy: raider));
+        NudgeTrace lost = Assert.Single(BoardTurn.Play(board).Nudges);
+
+        Assert.Contains(new BoardChange("east", "relation:west", $"{before}", $"{before - 1}"), lost.Changes);
+        Assert.Throws<ArgumentException>(() => board.Queue(new RationLost(deal.Id, "east", RaidedBy: "nobody")));
+    }
+
+    [Fact]
     public void A_ration_reaches_only_overland_past_no_blockade_and_only_a_seat_with_land()
     {
         Board board = Hungry();

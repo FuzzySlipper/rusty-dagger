@@ -666,70 +666,12 @@ internal sealed class DaggerfallCourierDispatches(
         RetireCourierLedgerMember(bandId, courierActorId);
     }
 
-    private void RetireCourierLedgerMember(string bandId, long? courierActorId)
-    {
-        // Release any OnOverlandBand members of this retired dispatch band so saves neither keep orphaned
-        // OnOverlandBand references nor leak permanent AtSite entries at off-screen destinations.
-        foreach (ActorLedgerEntry member in actorLedger.EntriesOnOverlandBand(bandId))
-            ReleaseOffStageOrPrune(member);
+    private void RetireCourierLedgerMember(string bandId, long? courierActorId) =>
+        DaggerfallRoadEnvoys.Release(actorLedger, bandId, "population/dispatch/", courierActorId is long cid ? [cid] : []);
 
-        if (courierActorId is long cid && actorLedger.TryGet(cid, out ActorLedgerEntry? entry)
-            && entry?.Location is { Kind: ActorLocationKind.OnOverlandBand, BandId: { } memberBandId }
-            && StringComparer.Ordinal.Equals(memberBandId, bandId))
-        {
-            ReleaseOffStageOrPrune(entry);
-        }
-    }
-
-    private void ReleaseOffStageOrPrune(ActorLedgerEntry entry)
-    {
-        bool untouchedStagedCourier = entry.Origin.SlotKey is { } slotKey
-            && slotKey.StartsWith("population/dispatch/", StringComparison.Ordinal)
-            && entry.Vitals is null
-            && entry.Combat is null
-            && entry.Referral is null;
-        if (untouchedStagedCourier)
-            actorLedger.Remove(entry.DurableId);
-        else
-            actorLedger.Upsert(entry with { Location = ActorLocationOverride.OffStage });
-    }
-
-    private long? StageCourierActor(DaggerfallSiteRecord origin, string dispatchId, int? sourceFactionId)
-    {
-        string race = DaggerfallSourcePopulation.TryResolveClimateRace(definitions, origin, out _) ?? "breton";
-        DaggerfallWorldProfileKey originProfile = DaggerfallWorldProfileIds.Exterior(origin.Id);
-        string slotId = $"population/dispatch/{dispatchId}";
-        ulong seed = DaggerfallPeopleSlots.SlotSeed(worldSocialSeed(), origin.Id, slotId);
-        long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(origin.Id, $"{originProfile.LogicalId}/{slotId}");
-
-        string gender = ((seed >> 3) & 1UL) != 0 ? "Female" : "Male";
-        int nameSeed = (int)((seed >> 8) & 0x7FFFUL) + 1;
-        int factionId = sourceFactionId is int sf && sf > 0
-            ? sf
-            : DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, origin.Id.Region)?.Id ?? 0;
-        DaggerfallNpcAppearance look = new(race, gender, 182, 0, nameSeed, factionId);
-        string displayName = generateName?.Invoke(look, origin.Id.Region) ?? "Royal Courier";
-        ActorOrigin actorOrigin = ActorOrigin.Seeded(originProfile, slotId, "courtier",
-            ActorHarmPolicyKind.LawProtectedCivilian, ActorInteractionPolicyKind.FullDialogue);
-        ActorSocialDiff socialDiff = new(
-            (int)DaggerfallNpcKind.Civilian,
-            slotId,
-            origin.Id.Region,
-            origin.Name,
-            string.Empty,
-            originProfile.LogicalId,
-            look.Race,
-            look.Gender,
-            look.BillboardArchive,
-            look.BillboardRecord,
-            look.NameSeed,
-            look.FactionId,
-            "courier",
-            ["talk"],
-            DisplayNameOverride: displayName);
-        actorLedger.Upsert(new ActorLedgerEntry(durableId, actorOrigin, Social: socialDiff));
-        return durableId;
-    }
+    private long? StageCourierActor(DaggerfallSiteRecord origin, string dispatchId, int? sourceFactionId) =>
+        DaggerfallRoadEnvoys.Stage(definitions, actorLedger, worldSocialSeed(), generateName, origin, $"population/dispatch/{dispatchId}",
+            "courtier", "courier", "Royal Courier", sourceFactionId);
 
     private DaggerfallSiteRecord? FindSite(DaggerfallSiteId id) =>
         definitions.Locations.Records.FirstOrDefault(r => r.Id == id);

@@ -830,6 +830,10 @@ internal sealed partial class DaggerfallSession
                 () => Expedition);
             if (saved is not null)
                 CourierDispatches.Restore(saved.CourierDispatches);
+            RationConvoys = new DaggerfallRationConvoys(definitions, State.ActorLedger, () => _worldSocialSeed,
+                new DaggerfallNames(definitions, _random).NpcName, () => OverlandParties,
+                seat => RealmArms.OfSeat(seat) is { } arms ? DaggerfallHeraldry.Hex(definitions.Heraldry.Colour(arms.Livery)) : null);
+            RationConvoys.Restore(saved?.RationConvoys);
             NoticeBoard = new DaggerfallNoticeBoard(
                 definitions, WorldConditions, OfficeHolders, OfficeLedger, State.Crime, State.Social,
                 () => checked((int)_time.Calendar.DayNumber), CurrentTextContext, () => State.Character.Identity,
@@ -1256,7 +1260,9 @@ internal sealed partial class DaggerfallSession
             if (definitions.PoliticalCanon is { } politicalCanon)
                 PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, State.Social.Liege,
                     OfficeLedger.ResolveBoardSeatPersona, WorldConditions, definitions.Locations.Records, CourierDispatches,
-                    _time.Calendar.DayNumber, saved?.PoliticalBoard, OfficeLedger);
+                    _time.Calendar.DayNumber, saved?.PoliticalBoard, OfficeLedger, RationConvoys,
+                    bandId => Expedition.PersistentBands.Any(band => StringComparer.Ordinal.Equals(band.BandId, bandId)),
+                    rider => State.ActorLedger.TryGet(rider, out ActorLedgerEntry? entry) && entry?.Location?.Kind == ActorLocationKind.Dead);
             if (PoliticalBoard is not null)
             {
                 OfficeAllegiance = new DaggerfallOfficeAllegiance(PoliticalBoard, State.Social, definitions.BoardSeats, OfficeLedger, _tuning.Politics);
@@ -1437,6 +1443,7 @@ internal sealed partial class DaggerfallSession
             _persistence.ConditionCounterplay = ConditionCounterplay.Capture;
             _persistence.NoticeBounties = NoticeBounties.Capture;
             _persistence.PoliticalBoard = () => PoliticalBoard?.Capture();
+            _persistence.RationConvoys = RationConvoys.Capture;
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;

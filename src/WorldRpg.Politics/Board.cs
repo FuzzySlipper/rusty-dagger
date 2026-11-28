@@ -26,6 +26,7 @@ public sealed class Board
     private readonly Dictionary<string, SeatDeck> decks;
     private readonly List<PendingMove> pending = [];
     private readonly List<Agreement> agreements = [];
+    private readonly HashSet<(string Deal, string Giver)> missedRations = [];
     private readonly List<War> wars = [];
     private readonly List<Truce> truces = [];
     private readonly List<Feud> feuds = [];
@@ -333,6 +334,7 @@ public sealed class Board
         WorldNudge[] taken = [.. queued];
         queued.Clear();
         intercepted.Clear();
+        missedRations.Clear();
         return taken;
     }
 
@@ -862,6 +864,23 @@ public sealed class Board
     /// <summary>Records <paramref name="offer"/>'s refusal; nothing else changes.</summary>
     public void RefuseAgreement(Agreement offer) =>
         changes.Add(new BoardChange(offer.Proposer, $"deal:{offer.Partner}", "none", $"refused {offer.Gives} for {offer.Asks}"));
+
+    /// <summary>Sets how many rations <paramref name="giver"/>'s term under <paramref name="deal"/> has lost on the road in a row.</summary>
+    public void SetRationLosses(Agreement deal, string giver, int lost)
+    {
+        if (deal.LostBy(giver) == lost) return;
+        int index = agreements.IndexOf(deal);
+        Agreement after = giver == deal.Proposer ? deal with { GivesLost = lost } : deal with { AsksLost = lost };
+        agreements[index] = after;
+        Undo(() => agreements[index] = deal);
+        Record(giver, $"ration:{deal.Id}", deal.LostBy(giver), lost);
+    }
+
+    /// <summary>This Sunday, <paramref name="giver"/>'s ration under <paramref name="deal"/> was lost on the road and relieves nothing.</summary>
+    public void MissRation(Agreement deal, string giver) => missedRations.Add((deal.Id, giver));
+
+    /// <summary>Whether <paramref name="giver"/>'s ration under agreement <paramref name="deal"/> was lost on the road this Sunday.</summary>
+    public bool RationMissed(string deal, string giver) => missedRations.Contains((deal, giver));
 
     /// <summary>Ends <paramref name="deal"/> for both sides, for <paramref name="reason"/>.</summary>
     public void EndAgreement(Agreement deal, string reason)

@@ -7,7 +7,7 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall.Travel;
 
 /// <summary>What a band on the map roughly is, as its token shows: read from its role, team, and nature.</summary>
-internal enum DaggerfallBandKind { Bandits, Travellers, Beasts, Undead, Monsters, Caravan, Courier, Patrol, Hostile, Clash }
+internal enum DaggerfallBandKind { Bandits, Travellers, Beasts, Undead, Monsters, Caravan, Courier, Patrol, Hostile, Clash, Convoy }
 
 /// <summary>
 /// One band on the expedition map: a staged token, not a simulated party. Its foe is the one its table gave when it was
@@ -103,7 +103,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         DaggerfallPersistentBandClashSave? activeClash = null,
         bool onRoad = false,
         int roadSegment = 0,
-        long? heldUntilSecond = null)
+        long? heldUntilSecond = null,
+        string? banner = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -129,6 +130,7 @@ internal sealed class DaggerfallPersistentOverlandBand
         OnRoad = onRoad;
         RoadSegment = Math.Max(0, roadSegment);
         HeldUntilSecond = heldUntilSecond;
+        Banner = banner;
     }
 
     internal string BandId { get; }
@@ -163,6 +165,9 @@ internal sealed class DaggerfallPersistentOverlandBand
 
     /// <summary>The absolute second a delay on the road holds the band where it is until, if one does.</summary>
     internal long? HeldUntilSecond { get; set; }
+
+    /// <summary>The colour of the arms the band flies (a board convoy flies its giver's, #11180), as <c>#rrggbb</c>; null for none.</summary>
+    internal string? Banner { get; }
 
     internal bool IsClash => ActiveClash is not null || Kind == DaggerfallBandKind.Clash;
 
@@ -379,7 +384,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         ActiveClash,
         OnRoad,
         RoadSegment,
-        HeldUntilSecond);
+        HeldUntilSecond,
+        Banner);
 
     internal static DaggerfallPersistentOverlandBand FromSave(DaggerfallPersistentBandSave save, int displayId) => new(
         save.BandId,
@@ -403,7 +409,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         save.ActiveClash,
         save.OnRoad,
         save.RoadSegment,
-        save.HeldUntilSecond);
+        save.HeldUntilSecond,
+        save.Banner);
 }
 
 /// <summary>What meets a band on the road as it sets out along a segment.</summary>

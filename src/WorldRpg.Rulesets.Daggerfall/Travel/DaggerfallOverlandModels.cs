@@ -45,7 +45,9 @@ internal sealed class DaggerfallOverlandModels : IDisposable
             [DaggerfallOverlandBanner.Patrol] = Flag(Solid(.28f, .44f, .70f), gold),
             [DaggerfallOverlandBanner.Hostile] = Flag(Solid(.78f, .15f, .11f), gold),
             [DaggerfallOverlandBanner.Clash] = Flag(Solid(.90f, .42f, .12f), gold),
+            [DaggerfallOverlandBanner.Convoy] = Flag(Solid(.80f, .70f, .42f), gold),
         };
+        _gold = gold;
         Dots = new Dictionary<DaggerfallOverlandDot, Appearance>
         {
             // Sight ring: sleek dark-rimmed champagne-gold arc dash, readable on both winter snow and night terrain.
@@ -104,6 +106,22 @@ internal sealed class DaggerfallOverlandModels : IDisposable
     internal Appearance NeutralHeading { get; }
     internal Appearance TokenShadow { get; }
     internal IReadOnlyDictionary<DaggerfallOverlandBanner, Appearance> Flags { get; }
+
+    private readonly Material _gold;
+    private readonly Dictionary<string, Appearance> _armsFlags = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// A pennant in the colour of a band's arms (<c>#rrggbb</c>, as a board convoy flies its giver's, #11180), trimmed in
+    /// gold as the others are; made once for each colour the map shows. Null for a colour that is not one.
+    /// </summary>
+    internal Appearance? FlagIn(string hex)
+    {
+        if (_armsFlags.TryGetValue(hex, out Appearance? made)) return made;
+        if (hex.Length != 7 || hex[0] != '#' || !uint.TryParse(hex.AsSpan(1), System.Globalization.NumberStyles.HexNumber, null, out uint rgb)) return null;
+        made = Flag(Solid(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f), _gold);
+        _armsFlags.Add(hex, made);
+        return made;
+    }
     internal IReadOnlyDictionary<DaggerfallOverlandDot, Appearance> Dots { get; }
 
     /// <summary>Adapts the token contact shadow opacity and tint to winter snow and night lighting.</summary>
@@ -516,7 +534,7 @@ internal sealed class DaggerfallOverlandModels : IDisposable
 }
 
 /// <summary>Whose standard a flag is: the party's, where it heads, or a band's by its kind.</summary>
-internal enum DaggerfallOverlandBanner { Party, Destination, Bandits, Travellers, Beasts, Undead, Monsters, Caravan, Courier, Patrol, Hostile, Clash }
+internal enum DaggerfallOverlandBanner { Party, Destination, Bandits, Travellers, Beasts, Undead, Monsters, Caravan, Courier, Patrol, Hostile, Clash, Convoy }
 
 /// <summary>What a dot on the map marks: the edge of the party's sight, the way it goes, a band that has seen it, or an active clash.</summary>
 internal enum DaggerfallOverlandDot { Sight, Route, Spotted, Clash }

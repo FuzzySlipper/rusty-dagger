@@ -35,6 +35,39 @@ internal sealed class DaggerfallBoardInspection(Func<DaggerfallPoliticalBoard?> 
         });
     }
 
+    public DebugCommandResult SendConvoy()
+    {
+        if (politicalBoard() is not { } owner) return DaggerfallDeveloperReplies.Refused("No political board runs in this session.");
+        Board board = owner.Board;
+        if (!board.Agreements.Any(deal => deal.Gives.IsGrain || deal.Asks.IsGrain))
+        {
+            TradeTerm coin = TradeTerm.Parse("coin:1/4")!;
+            (BoardSeat Giver, BoardSeat Receiver, TradeTerm Grain)? pair = board.Seats
+                .SelectMany(giver => board.Seats.Where(receiver => receiver != giver).Select(receiver => (giver, receiver)))
+                .Select(seats => Trade.Resolve(board, TradeTerm.Parse("grain")!, seats.giver, seats.receiver) is { } grain
+                    && Trade.Fits(board, seats.receiver, seats.giver, coin, grain) ? (seats.giver, seats.receiver, grain) : ((BoardSeat, BoardSeat, TradeTerm)?)null)
+                .FirstOrDefault(found => found is not null);
+            if (pair is not { } struck) return DaggerfallDeveloperReplies.Refused("No two seats can trade grain now.");
+            board.AddAgreement(Trade.Offer(board, struck.Receiver, struck.Giver, coin, struck.Grain));
+        }
+        IReadOnlyList<DaggerfallRationConvoySave> sent = owner.SendConvoys();
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartArray();
+            foreach (DaggerfallRationConvoySave convoy in sent)
+            {
+                w.WriteStartObject();
+                w.WriteString("band", convoy.BandId);
+                w.WriteString("giver", convoy.Giver);
+                w.WriteString("receiver", convoy.Receiver);
+                w.WriteString("origin", $"{convoy.Origin.Region}/{convoy.Origin.Index}");
+                w.WriteString("destination", $"{convoy.Destination.Region}/{convoy.Destination.Index}");
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+        });
+    }
+
     public DebugCommandResult State()
     {
         if (politicalBoard() is not { } owner) return DaggerfallDeveloperReplies.Refused("No political board runs in this session.");

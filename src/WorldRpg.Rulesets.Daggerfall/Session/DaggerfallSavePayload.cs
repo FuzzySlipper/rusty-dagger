@@ -106,6 +106,8 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallNoticeBountiesSave NoticeBounties { get; init; } = DaggerfallNoticeBountiesSave.Empty;
     /// <summary>The political board in play; null when the base pack carries no board (or the save was made before it ran).</summary>
     public DaggerfallPoliticalBoardSave? PoliticalBoard { get; init; }
+    /// <summary>The board's rations on the road as convoys (#11180); empty when none is.</summary>
+    public DaggerfallRationConvoySave[] RationConvoys { get; init; } = [];
     /// <summary>Every selected RDB door's current state, including a partially completed motion.</summary>
     [JsonRequired]
     public DaggerfallDoorSave[] Doors { get; init; } = [];

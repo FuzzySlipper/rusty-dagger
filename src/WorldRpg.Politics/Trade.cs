@@ -40,11 +40,15 @@ public sealed record TradeTerm(Resource? Resource, int Amount, int EveryWeeks, s
 /// <see cref="Asks"/>, each Sunday a term falls due, from the turn after <see cref="Start"/> through <see cref="End"/>;
 /// it lapses the Sunday after.
 /// <see cref="ProposerPrice"/> and <see cref="PartnerPrice"/> are the bargain each side struck: what the resource terms
-/// were worth to it when the deal was made (<see cref="Trade.Worth"/>).
+/// were worth to it when the deal was made (<see cref="Trade.Worth"/>). <see cref="GivesLost"/> and
+/// <see cref="AsksLost"/> count each grain term's rations lost on the road since one last arrived (<see cref="RationLost"/>).
 /// </summary>
 public sealed record Agreement(string Id, string Proposer, TradeTerm Gives, string Partner, TradeTerm Asks, int Start, int End,
-    int ProposerPrice, int PartnerPrice)
+    int ProposerPrice, int PartnerPrice, int GivesLost = 0, int AsksLost = 0)
 {
+    /// <summary>The rations <paramref name="giver"/>'s term has lost on the road since one last arrived.</summary>
+    public int LostBy(string giver) => giver == Proposer ? GivesLost : AsksLost;
+
     public int PriceTo(string seat) => seat == Proposer ? ProposerPrice : PartnerPrice;
 
     public bool Binds(string seat) => Proposer == seat || Partner == seat;
@@ -78,6 +82,12 @@ public static class Trade
 {
     public const int TermWeeks = 26;
     public const int MaxAgreements = 3;
+
+    /// <summary>How many rations lost on the road in a row, none arriving between, cut a deal's route: it ends "route raided".</summary>
+    public const int RouteRaidedLosses = 2;
+
+    /// <summary>Why a deal whose rations were lost <see cref="RouteRaidedLosses"/> times in a row ended.</summary>
+    public const string RouteRaided = "route raided";
 
     /// <summary>How many weeks ahead a seat weighs a deal; a term falls due at most this far apart.</summary>
     public const int Horizon = 8;
@@ -162,8 +172,8 @@ public static class Trade
                 board.EndAgreement(deal, reason);
                 continue;
             }
-            Ration(board, deal.Gives, proposer, partner, fed, relieved);
-            Ration(board, deal.Asks, partner, proposer, fed, relieved);
+            Ration(board, deal, deal.Gives, proposer, partner, fed, relieved);
+            Ration(board, deal, deal.Asks, partner, proposer, fed, relieved);
         }
         return relieved;
     }
@@ -245,9 +255,27 @@ public static class Trade
             : null;
     }
 
-    private static void Ration(Board board, TradeTerm term, Seat giver, Seat receiver, HashSet<Region> fed, HashSet<Region> relieved)
+    /// <summary>
+    /// Where <paramref name="giver"/>'s ration under <paramref name="deal"/> goes now (#11180): the receiver's most valuable
+    /// region it reaches that is not fed, else the most valuable it reaches; null when its term sends no grain or reaches
+    /// none of the receiver's land.
+    /// </summary>
+    public static Region? RationDestination(Board board, Agreement deal, string giver)
     {
-        if (term.Source is null) return;
+        if (deal.GivenBy(giver).Source is not { } source) return null;
+        Seat receiver = board.Seat(deal.Other(giver));
+        HashSet<Region> reached = Reached(board, board.Region(source), board.Seat(giver), receiver);
+        return board.Regions
+            .Where(region => region.Allegiance == receiver.Id && reached.Contains(region))
+            .OrderBy(region => region.Supply == RegionSupply.Fed ? 1 : 0)
+            .ThenByDescending(region => Conditions.ProsperityIncome(region) + region.Control)
+            .FirstOrDefault();
+    }
+
+    private static void Ration(Board board, Agreement deal, TradeTerm term, Seat giver, Seat receiver, HashSet<Region> fed, HashSet<Region> relieved)
+    {
+        // A ration lost on the road this week relieves nothing (RationLost).
+        if (term.Source is null || board.RationMissed(deal.Id, giver.Id)) return;
         HashSet<Region> reached = Reached(board, board.Region(term.Source), giver, receiver);
         Region? hungry = board.Regions
             .Where(region => region.Allegiance == receiver.Id && !fed.Contains(region) && !relieved.Contains(region) && reached.Contains(region))

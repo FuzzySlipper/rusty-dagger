@@ -75,6 +75,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     internal Func<DaggerfallConditionCounterplaySave> ConditionCounterplay { get; set; } = () => DaggerfallConditionCounterplaySave.Empty;
     internal Func<DaggerfallNoticeBountiesSave> NoticeBounties { get; set; } = () => DaggerfallNoticeBountiesSave.Empty;
     internal Func<DaggerfallPoliticalBoardSave?> PoliticalBoard { get; set; } = () => null;
+    internal Func<DaggerfallRationConvoySave[]> RationConvoys { get; set; } = () => [];
     internal Func<DaggerfallTeleportAnchor?> TeleportAnchor { get; set; } = () => null;
     internal Func<IReadOnlySet<long>> BanishedActors { get; set; } = () => new HashSet<long>();
     internal DaggerfallSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallEquipmentMoves pack, DaggerfallBookNotebook notebook,
@@ -191,6 +192,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             ConditionCounterplay = ConditionCounterplay(),
             NoticeBounties = NoticeBounties(),
             PoliticalBoard = PoliticalBoard(),
+            RationConvoys = RationConvoys(),
             Doors = _doors().Capture(),
             SiteDeltas = siteDeltas,
             DungeonMotion = dungeonMotion,

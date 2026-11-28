@@ -18,6 +18,8 @@ namespace WorldRpg.Politics;
 [JsonDerivedType(typeof(LairCleared), "lairCleared")]
 [JsonDerivedType(typeof(ConditionEased), "conditionEased")]
 [JsonDerivedType(typeof(MainQuestBoon), "mainQuestBoon")]
+[JsonDerivedType(typeof(RationLost), "rationLost")]
+[JsonDerivedType(typeof(RationArrived), "rationArrived")]
 public abstract record WorldNudge;
 
 /// <summary>
@@ -50,6 +52,17 @@ public sealed record MoveDelayed(string MoveId, int Weeks) : WorldNudge;
 
 /// <summary>The slow move <paramref name="MoveId"/> was intercepted on its way: it never arrives.</summary>
 public sealed record MoveIntercepted(string MoveId) : WorldNudge;
+
+/// <summary>
+/// The convoy carrying <paramref name="Giver"/>'s grain under agreement <paramref name="Agreement"/> was lost on the road:
+/// this Sunday its ration relieves nothing. A loss that makes <see cref="Trade.RouteRaidedLosses"/> in a row ends the deal
+/// as <see cref="Trade.RouteRaided"/>, with no default. When <paramref name="RaidedBy"/> names a seat, its soldiers did it,
+/// and the giver thinks 1 worse of it.
+/// </summary>
+public sealed record RationLost(string Agreement, string Giver, string? RaidedBy = null) : WorldNudge;
+
+/// <summary>A convoy carrying <paramref name="Giver"/>'s grain under <paramref name="Agreement"/> arrived: its losses in a row are cleared.</summary>
+public sealed record RationArrived(string Agreement, string Giver) : WorldNudge;
 
 /// <summary>A lair in <paramref name="Region"/> was cleared: its monster surge lifts, of <paramref name="Family"/> or of every family.</summary>
 public sealed record LairCleared(string Region, string? Family = null) : WorldNudge;
@@ -124,6 +137,8 @@ public static class Nudges
         MoveDelayed delayed => delayed.Weeks < 1 ? $"delays move '{delayed.MoveId}' by {delayed.Weeks} weeks" : null,
         LairCleared lair => RegionProblem(board, lair.Region),
         ConditionEased eased => RegionProblem(board, eased.Region) ?? (eased.Amount < 1 ? $"eases a condition by {eased.Amount}" : null),
+        RationLost lost => SeatProblem(board, lost.Giver) ?? (lost.RaidedBy is { } raider ? SeatProblem(board, raider) : null),
+        RationArrived arrived => SeatProblem(board, arrived.Giver),
         _ => $"is an unknown nudge {nudge.GetType().Name}",
     };
 
@@ -168,10 +183,25 @@ public static class Nudges
             case ConditionEased eased:
                 board.EaseCondition(board.Region(eased.Region), eased.Condition, eased.Detail, eased.Amount);
                 return NudgeOutcome.Applied;
+            case RationLost lost:
+                if (Ration(board, lost.Agreement, lost.Giver) is not { } deal) return NudgeOutcome.Stale;
+                board.MissRation(deal, lost.Giver);
+                if (deal.LostBy(lost.Giver) + 1 >= Trade.RouteRaidedLosses) board.EndAgreement(deal, Trade.RouteRaided);
+                else board.SetRationLosses(deal, lost.Giver, deal.LostBy(lost.Giver) + 1);
+                if (lost.RaidedBy is { } raider && raider != lost.Giver) board.AdjustRelation(board.Seat(lost.Giver), board.Seat(raider), -1);
+                return NudgeOutcome.Applied;
+            case RationArrived arrived:
+                if (Ration(board, arrived.Agreement, arrived.Giver) is not { } kept) return NudgeOutcome.Stale;
+                board.SetRationLosses(kept, arrived.Giver, 0);
+                return NudgeOutcome.Applied;
             default:
                 throw new ArgumentOutOfRangeException(nameof(nudge), nudge, null);
         }
     }
+
+    /// <summary>The deal in force under <paramref name="id"/> whose grain <paramref name="giver"/> sends, if any.</summary>
+    private static Agreement? Ration(Board board, string id, string giver) =>
+        board.Agreements.FirstOrDefault(deal => deal.Id == id && deal.Binds(giver) && deal.GivenBy(giver).IsGrain);
 
     /// <summary>
     /// The card a quest outcome or boon is applied as: no cost, and a target inferred from its targets, nothing, a region,

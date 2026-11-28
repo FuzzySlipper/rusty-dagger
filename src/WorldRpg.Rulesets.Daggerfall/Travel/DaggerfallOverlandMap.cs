@@ -438,17 +438,17 @@ internal sealed class DaggerfallOverlandMap : IDisposable
                 GroundPlace(headingArrow, tip, rot, new(ringScale * .55f));
             }
         }
-        void Standard(DaggerfallOverlandBanner banner, double x, double z, ulong? part = null, float lift = 0f)
+        void Standard(DaggerfallOverlandBanner banner, double x, double z, ulong? part = null, float lift = 0f, string? arms = null)
         {
             Stand(models.Pole, x, z, token, sink: -lift, part: part);
-            Stand(models.Flags[banner], x, z, token, turn: flagSway, sink: -lift);
+            Stand(arms is not null && models.FlagIn(arms) is { } flown ? flown : models.Flags[banner], x, z, token, turn: flagSway, sink: -lift);
         }
         // A figure stands as its mobile's billboard, sized in screen pixels so the party and the bands read the same at
         // every zoom, or as a standard where the site has no sprite for it. Its transform takes no scale.
-        void Figure(int? mobile, DaggerfallOverlandBanner banner, double x, double z, float bob = 0f, ulong? part = null)
+        void Figure(int? mobile, DaggerfallOverlandBanner banner, double x, double z, float bob = 0f, ulong? part = null, string? arms = null)
         {
             if (mobile is int id && Billboard(id) is { } look) Stand(look, x, z, 1 / DaggerfallOverlandTerrain.Scale, sink: -bob, part: part);
-            else Standard(banner, x, z, part, bob);
+            else Standard(banner, x, z, part, bob, arms);
         }
         void Label(string name, string kind, double x, double z, float above, double opacity = 1.0)
         {
@@ -600,7 +600,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
                 : null;
             AnchorOnGround(ring, x, z, ringScale, token * .76f, !band.Camp && !band.IsClash ? band.Heading : null,
                 headingArrow, token > 0 ? bandBob / (token * .11f) : 0f);
-            Figure(band.Mobile, Banner(band.Kind), x, z, bandBob);
+            Figure(band.Mobile, Banner(band.Kind), x, z, bandBob, arms: band.Banner);
             string labelKind = band.IsClash
                 ? "clash"
                 : band.Spotted
@@ -611,6 +611,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
                         {
                             DaggerfallBandKind.Caravan => "caravan",
                             DaggerfallBandKind.Courier => "courier",
+                            DaggerfallBandKind.Convoy => "convoy",
                             DaggerfallBandKind.Patrol => "patrol",
                             DaggerfallBandKind.Hostile => "hostile",
                             _ => "band",
@@ -913,6 +914,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         DaggerfallBandKind.Patrol => DaggerfallOverlandBanner.Patrol,
         DaggerfallBandKind.Hostile => DaggerfallOverlandBanner.Hostile,
         DaggerfallBandKind.Clash => DaggerfallOverlandBanner.Clash,
+        DaggerfallBandKind.Convoy => DaggerfallOverlandBanner.Convoy,
         _ => DaggerfallOverlandBanner.Monsters,
     };
 

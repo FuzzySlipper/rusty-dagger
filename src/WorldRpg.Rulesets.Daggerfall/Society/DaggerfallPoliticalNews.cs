@@ -7,8 +7,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallPoliticalNewsItem(string EventId, string Headline, string Body, DaggerfallSiteRecord Origin, long Minute, int? FactionId);
 
 /// <summary>
-/// What of a board turn is news the towns hear: wars declared, the chronicle's arcs as they peak and settle, and the
-/// public moves that change who holds a region or an office. Ordinary weekly moves are not news; the world sees them
+/// What of a board turn is news the towns hear: wars declared, the chronicle's arcs as they peak and settle, the
+/// public moves that change who holds a region or an office, and grain trade ended by raided roads. Ordinary weekly moves are not news; the world sees them
 /// through the condition tokens. Secret moves never are: their tokens show the symptom only. A war's end is told by
 /// its arc, not by the move that ended it. Each piece spreads from the largest town of its region.
 /// </summary>
@@ -92,6 +92,16 @@ internal sealed class DaggerfallPoliticalNews
                     break;
             }
         }
+
+        // A grain deal whose convoys were taken twice running ends on the road (#11180).
+        foreach (NudgeTrace nudge in trace.Nudges)
+            if (nudge.Nudge is RationLost lost && nudge.Changes.FirstOrDefault(change => change.To == Trade.RouteRaided) is { } ended)
+            {
+                string receiver = ended.Subject == lost.Giver ? ended.Field["deal:".Length..] : ended.Subject;
+                Add($"route-raided:{lost.Agreement}", $"{Name(lost.Giver)} Stops Sending Grain to {Name(receiver)}",
+                    $"Raiders have taken {Name(lost.Giver)}'s grain wagons on the road to {Name(receiver)} twice running, and the trade between them is ended.",
+                    Home(lost.Giver) ?? Home(receiver), lost.Giver);
+            }
 
         foreach ((string id, string seat, string cardId, IReadOnlyList<string> targets) in Resolved(trace))
         {

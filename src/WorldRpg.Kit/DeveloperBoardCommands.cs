@@ -22,4 +22,7 @@ public interface IDeveloperBoardCommands : IDebugCommandModule
 
     [DebugCommand("board.allegiance", Description = "Developer: give a political board region (its id, such as glenpoint) to a seat (such as wayrest), or to no one (none), at once, as an annexation would, so the world's liege, heraldry, banners and the map's Realms view follow it. A capital keeps its crown.")]
     DebugCommandResult Allegiance(string region, string seat);
+
+    [DebugCommand("board.send-convoy", Description = "Developer: send this week's ration convoys now, as Sunday sends them, for every grain agreement in force; with none in force, first strike coin for grain between the first two seats that can trade it. Lists each convoy's band, giver and towns as JSON.")]
+    DebugCommandResult SendConvoy();
 }
