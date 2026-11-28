@@ -56,7 +56,13 @@ public sealed class DaggerfallEnemySensesTests
         Assert.True(stage.Senses.IsHostile(Foe, stage.Monster));
         Assert.False(stage.Senses.IsHostile(Ally, stage.Monster));
         Assert.False(stage.Senses.IsHostile(Pacified, stage.Monster));
-        Assert.False(stage.Senses.IsHostile(Foe, stage.Monster with { Kind = DaggerfallActorKinds.Civilian }));
+        // Unified templates (#11093) govern combat-encounter eligibility via Capabilities.IsCombatEncounter;
+        // a civilian (non-combat-encounter) definition is never hostile.
+        Assert.False(stage.Senses.IsHostile(Foe, stage.Monster with
+        {
+            Kind = DaggerfallActorKinds.Civilian,
+            Capabilities = stage.Monster.Capabilities with { IsCombatEncounter = false },
+        }));
     }
 
     [Fact]

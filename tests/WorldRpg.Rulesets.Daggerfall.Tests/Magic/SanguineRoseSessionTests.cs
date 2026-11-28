@@ -179,7 +179,8 @@ public sealed class SanguineRoseSessionTests
         SamePose(pose, restored.State.Actors.Get(ally).Pose);
         Assert.Equal("player-ally", restored.DefinitionsByActor[ally].Team);
         Assert.Equal(27, restored.DefinitionsByActor[ally].MobileId);
-        Assert.Single(restored.DefinitionsByActor.Where(entry => entry.Value.Team == "player-ally"));
+        Assert.Single(restored.DefinitionsByActor.Where(entry =>
+            entry.Key != DaggerfallActorIdentity.PlayerEntityId && entry.Value.Team == "player-ally"));
     }
 
     [Fact]
@@ -293,7 +294,10 @@ public sealed class SanguineRoseSessionTests
             Update();
 
         }
-        internal IEnumerable<long> Allies() => Session.DefinitionsByActor.Where(entry => entry.Value.Team == "player-ally").Select(entry => entry.Key);
+        // Player spec declares team='player-ally' (#11093), so exclude the player entity when enumerating summoned allies.
+        internal IEnumerable<long> Allies() => Session.DefinitionsByActor
+            .Where(entry => entry.Key != DaggerfallActorIdentity.PlayerEntityId && entry.Value.Team == "player-ally")
+            .Select(entry => entry.Key);
         internal PerceptionReadoutResult Respond(PerceptionQueryRequest request, bool combat = false)
         {
             var observer = request.Observers.Span[0];
