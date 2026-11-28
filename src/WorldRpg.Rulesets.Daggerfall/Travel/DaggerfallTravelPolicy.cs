@@ -65,6 +65,7 @@ internal sealed class DaggerfallTravelPolicy
     private readonly DaggerfallTransportTuning _transport;
     private readonly double _baselineFlatLandMinutes;
     private readonly Dictionary<(DaggerfallTravelMapPixel Origin, DaggerfallTravelMapPixel Destination), DaggerfallOverlandRoute> _routeCache = [];
+    private readonly Dictionary<(DaggerfallTravelMapPixel Origin, DaggerfallTravelMapPixel Destination, string Avoid), DaggerfallOverlandRoute> _avoidingRouteCache = [];
     private CoarseRoutingGrid? _coarseGrid;
     private readonly List<CoarseDistanceField> _coarseFields = [];
 
@@ -244,6 +245,63 @@ internal sealed class DaggerfallTravelPolicy
         if (_routeCache.Count >= MaxRouteCacheEntries)
             _routeCache.Clear();
         _routeCache[key] = route;
+        return route;
+    }
+
+    /// <summary>
+    /// The overland route from <paramref name="origin"/> to <paramref name="destination"/> that never sets foot in a
+    /// pixel of <paramref name="avoidRegions"/> (#11180: a board ration keeps out of blockaded regions and those of crowns
+    /// hostile to either side). The ordinary route serves where it already keeps out; otherwise the whole map is searched,
+    /// on the ordinary route's step costs. Where no way keeps out, the ordinary route is all there is.
+    /// </summary>
+    internal DaggerfallOverlandRoute OverlandRoute(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination, IReadOnlyCollection<int> avoidRegions)
+    {
+        DaggerfallOverlandRoute plain = OverlandRoute(origin, destination);
+        if (avoidRegions.Count == 0) return plain;
+        HashSet<int> avoid = [.. avoidRegions];
+        bool Avoided(DaggerfallTravelMapPixel pixel) => pixel != origin && pixel != destination && avoid.Contains(RegionAt(pixel));
+        if (!plain.Waypoints.Any(Avoided)) return plain;
+        string key = string.Join(',', avoid.Order());
+        if (_avoidingRouteCache.TryGetValue((origin, destination, key), out DaggerfallOverlandRoute? cached)) return cached;
+
+        const int Width = DaggerfallTravelMapPixel.Width, Height = DaggerfallTravelMapPixel.Height;
+        double[] gScore = new double[Width * Height];
+        Array.Fill(gScore, double.PositiveInfinity);
+        int[] cameFrom = new int[Width * Height];
+        Array.Fill(cameFrom, -1);
+        bool[] closed = new bool[Width * Height];
+        int start = origin.Y * Width + origin.X, goal = destination.Y * Width + destination.X;
+        gScore[start] = 0d;
+        PriorityQueue<int, double> open = new();
+        open.Enqueue(start, OctileDistance(origin.X, origin.Y, destination.X, destination.Y));
+        DaggerfallOverlandRoute route = plain;
+        while (open.TryDequeue(out int current, out _))
+        {
+            if (closed[current]) continue;
+            closed[current] = true;
+            if (current == goal)
+            {
+                route = BuildOverlandRoute(origin, destination, ReconstructLocalPath(cameFrom, start, goal, 0, 0, Width));
+                break;
+            }
+            DaggerfallTravelMapPixel here = new(current % Width, current / Width);
+            bool hereOcean = IsOcean(here);
+            foreach ((int dx, int dy, double length) in Neighbours8)
+            {
+                int nx = here.X + dx, ny = here.Y + dy;
+                if (nx is < 0 or >= Width || ny is < 0 or >= Height) continue;
+                int next = ny * Width + nx;
+                DaggerfallTravelMapPixel pixel = new(nx, ny);
+                if (closed[next] || Avoided(pixel)) continue;
+                double g = gScore[current] + RoutingStepCost(here, hereOcean, pixel, length);
+                if (g >= gScore[next]) continue;
+                gScore[next] = g;
+                cameFrom[next] = current;
+                open.Enqueue(next, g + OctileDistance(nx, ny, destination.X, destination.Y));
+            }
+        }
+        if (_avoidingRouteCache.Count >= MaxRouteCacheEntries) _avoidingRouteCache.Clear();
+        _avoidingRouteCache[(origin, destination, key)] = route;
         return route;
     }
 

@@ -203,7 +203,8 @@ internal sealed record DaggerfallPersistentBandSave(
     bool OnRoad = false,
     int RoadSegment = 0,
     long? HeldUntilSecond = null,
-    string? Banner = null)
+    string? Banner = null,
+    int[]? AvoidRegions = null)
 {
     internal DaggerfallPersistentBandSave Validate()
     {

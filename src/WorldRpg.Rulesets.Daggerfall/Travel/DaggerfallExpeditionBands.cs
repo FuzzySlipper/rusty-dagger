@@ -104,7 +104,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         bool onRoad = false,
         int roadSegment = 0,
         long? heldUntilSecond = null,
-        string? banner = null)
+        string? banner = null,
+        IReadOnlyList<int>? avoidRegions = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -131,6 +132,7 @@ internal sealed class DaggerfallPersistentOverlandBand
         RoadSegment = Math.Max(0, roadSegment);
         HeldUntilSecond = heldUntilSecond;
         Banner = banner;
+        AvoidRegions = avoidRegions ?? [];
     }
 
     internal string BandId { get; }
@@ -169,6 +171,9 @@ internal sealed class DaggerfallPersistentOverlandBand
     /// <summary>The colour of the arms the band flies (a board convoy flies its giver's, #11180), as <c>#rrggbb</c>; null for none.</summary>
     internal string? Banner { get; }
 
+    /// <summary>The classic regions the band's route keeps out of (a board ration's forbidden regions, #11180); empty for none.</summary>
+    internal IReadOnlyList<int> AvoidRegions { get; }
+
     internal bool IsClash => ActiveClash is not null || Kind == DaggerfallBandKind.Clash;
 
     internal double Distance(double x, double y) => Math.Sqrt((X - x) * (X - x) + (Y - y) * (Y - y));
@@ -186,7 +191,7 @@ internal sealed class DaggerfallPersistentOverlandBand
         RouteOrigin = origin;
         if (_cachedRoute is { } cached && cached.Origin == origin && cached.Destination == dest.Pixel)
             return cached;
-        _cachedRoute = policy.OverlandRoute(origin, dest.Pixel);
+        _cachedRoute = policy.OverlandRoute(origin, dest.Pixel, AvoidRegions);
         return _cachedRoute;
     }
 
@@ -385,7 +390,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         OnRoad,
         RoadSegment,
         HeldUntilSecond,
-        Banner);
+        Banner,
+        AvoidRegions.Count > 0 ? [.. AvoidRegions] : null);
 
     internal static DaggerfallPersistentOverlandBand FromSave(DaggerfallPersistentBandSave save, int displayId) => new(
         save.BandId,
@@ -410,7 +416,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         save.OnRoad,
         save.RoadSegment,
         save.HeldUntilSecond,
-        save.Banner);
+        save.Banner,
+        save.AvoidRegions);
 }
 
 /// <summary>What meets a band on the road as it sets out along a segment.</summary>

@@ -87,7 +87,7 @@ internal sealed class DaggerfallRationConvoys(
     /// map to travel or no town to go to.
     /// </summary>
     internal DaggerfallRationConvoySave? Dispatch(string agreement, string giver, string giverName, int? giverFaction, string receiver,
-        IReadOnlyList<DaggerfallSiteRecord> towns, int turn)
+        IReadOnlyList<DaggerfallSiteRecord> towns, IReadOnlyList<int> avoidRegions, int turn)
     {
         DaggerfallSiteRecord[] route = [.. towns.DistinctBy(town => town.Id)];
         if (overlandParties() is not { } coordinator || route.Length < 2) return null;
@@ -102,7 +102,7 @@ internal sealed class DaggerfallRationConvoys(
             .. Enumerable.Range(1, Guards).Select(guard => DaggerfallRoadEnvoys.Stage(definitions, actorLedger, worldSocialSeed(), generateName,
                 origin, string.Create(CultureInfo.InvariantCulture, $"{slot}/guard-{guard}"), "convoy-guard", "convoy guard", "Convoy Guard", giverFaction)),
         ];
-        Ride(coordinator, bandId, $"{giverName} Grain Convoy", giverName, bannerOfSeat(giver), riders, origin, route[1]);
+        Ride(coordinator, bandId, $"{giverName} Grain Convoy", giverName, bannerOfSeat(giver), riders, origin, route[1], avoidRegions);
         DaggerfallRationConvoySave convoy = new DaggerfallRationConvoySave(bandId, agreement, giver, receiver,
             new(origin.Id.Region, origin.Id.Index), [.. route.Skip(1).Select(town => new DaggerfallSiteIdSave(town.Id.Region, town.Id.Index))],
             0, turn, riders).Validate();
@@ -111,7 +111,7 @@ internal sealed class DaggerfallRationConvoys(
     }
 
     private static void Ride(DaggerfallOverlandPartyCoordinator coordinator, string bandId, string name, string giverName, string? banner,
-        long[] riders, DaggerfallSiteRecord from, DaggerfallSiteRecord to) =>
+        long[] riders, DaggerfallSiteRecord from, DaggerfallSiteRecord to, IReadOnlyList<int> avoidRegions) =>
         _ = coordinator.DispatchOverlandBand(
             bandId: bandId,
             name: name,
@@ -124,7 +124,8 @@ internal sealed class DaggerfallRationConvoys(
             destinationProfile: DaggerfallWorldProfileIds.Exterior(to.Id),
             faction: giverName,
             originSite: from.Id,
-            banner: banner);
+            banner: banner,
+            avoidRegions: avoidRegions);
 
     /// <summary>
     /// A convoy's band reached the stop it was bound for: short of its destination it sets out at once for the next stop,
@@ -137,7 +138,7 @@ internal sealed class DaggerfallRationConvoys(
             && definitions.Locations.Records.FirstOrDefault(site => site.Id == convoy.Stops[convoy.Leg].Require()) is { } here
             && definitions.Locations.Records.FirstOrDefault(site => site.Id == convoy.Stops[convoy.Leg + 1].Require()) is { } next)
         {
-            Ride(coordinator, band.BandId, band.Name, band.Faction ?? convoy.Giver, band.Banner, convoy.Riders, here, next);
+            Ride(coordinator, band.BandId, band.Name, band.Faction ?? convoy.Giver, band.Banner, convoy.Riders, here, next, band.AvoidRegions);
             _convoys[band.BandId] = convoy with { Leg = convoy.Leg + 1 };
             return true;
         }

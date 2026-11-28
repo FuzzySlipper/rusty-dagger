@@ -560,7 +560,10 @@ internal sealed class DaggerfallPoliticalBoard
             foreach (string giver in new[] { deal.Proposer, deal.Partner })
             {
                 DaggerfallSiteRecord[] towns = [.. Trade.RationRoute(_board, deal, giver).Select(region => Town(region.Id)).OfType<DaggerfallSiteRecord>()];
-                if (_convoys.Dispatch(deal.Id, giver, _board.Seat(giver).Name, Faction(giver), deal.Other(giver), towns, _board.Turn) is { } convoy)
+                // Its road keeps out of every region the grain may not pass, not only between its stops.
+                int[] avoid = [.. _board.Regions.Where(region => !Trade.Passable(_board, region, _board.Seat(giver), _board.Seat(deal.Other(giver))))
+                    .Select(region => region.CatalogRegion).Distinct()];
+                if (_convoys.Dispatch(deal.Id, giver, _board.Seat(giver).Name, Faction(giver), deal.Other(giver), towns, avoid, _board.Turn) is { } convoy)
                     sent.Add(convoy);
             }
         return sent;

@@ -231,7 +231,8 @@ public static class Trade
         return reached;
     }
 
-    private static bool Passable(Board board, Region region, Seat giver, Seat receiver) =>
+    /// <summary>Whether a ration from <paramref name="giver"/> to <paramref name="receiver"/> may pass through <paramref name="region"/>: neither blockaded nor held by a crown hostile to either side.</summary>
+    public static bool Passable(Board board, Region region, Seat giver, Seat receiver) =>
         !Supply.Blockaded(region)
         && (region.Allegiance is not { } holder
             || board.Relation(holder, giver.Id) > Supply.Hostile && board.Relation(holder, receiver.Id) > Supply.Hostile);

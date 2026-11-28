@@ -192,7 +192,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         int? mobile = null,
         string? faction = null,
         DaggerfallSiteId? originSite = null,
-        string? banner = null)
+        string? banner = null,
+        IReadOnlyList<int>? avoidRegions = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
         ArgumentNullException.ThrowIfNull(memberIds);
@@ -218,7 +219,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                 Math.Clamp((int)Math.Floor(startX), 0, DaggerfallTravelMapPixel.Width - 1),
                 Math.Clamp((int)Math.Floor(startY), 0, DaggerfallTravelMapPixel.Height - 1));
             routeOrigin = startPixel;
-            DaggerfallOverlandRoute route = _expedition.Policy.OverlandRoute(startPixel, dest.Pixel);
+            DaggerfallOverlandRoute route = _expedition.Policy.OverlandRoute(startPixel, dest.Pixel, avoidRegions ?? []);
             DaggerfallTravelMapPixel aim = route.Waypoints.Count > 0 ? route.Waypoints[0] : dest.Pixel;
             double dx = (aim.X + .5) - startX;
             double dy = (aim.Y + .5) - startY;
@@ -244,7 +245,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             RouteStep: 0,
             Faction: string.IsNullOrWhiteSpace(faction) ? null : faction.Trim(),
             OriginSite: originSite is { } os ? new DaggerfallSiteIdSave(os.Region, os.Index) : null,
-            Banner: banner);
+            Banner: banner,
+            AvoidRegions: avoidRegions is { Count: > 0 } ? [.. avoidRegions] : null);
         return _expedition.RegisterPersistentBand(save);
     }
 

@@ -300,6 +300,49 @@ public sealed class RoadTravelTests
         return (EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service), inputs);
     }
 
+    [Fact]
+    public void A_band_kept_out_of_a_region_goes_around_its_shortcut_and_keeps_out_after_a_save()
+    {
+        // Two bordering regions, west (0) and east (1), and a third (2) jutting between them at (12, 10): the straight
+        // way from (10, 10) to (14, 10) crosses it, the way round above or below it does not.
+        const int width = Width + 1, height = 20;
+        byte[] regions = new byte[width * height];
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < Width; x++)
+                regions[(y * width) + x + 1] = (byte)(x == 12 && y is >= 8 and <= 12 ? 130 : x < 12 ? 128 : 129);
+        DaggerfallWorldGridsSet grids = new(new DaggerfallClimateGridDefinition(width, height, Enumerable.Repeat((byte)231, width * height).ToArray(),
+                [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]),
+            new DaggerfallPoliticGridDefinition(width, height, regions,
+                [new(128, 0, DaggerfallPoliticDisposition.Region), new(129, 1, DaggerfallPoliticDisposition.Region), new(130, 2, DaggerfallPoliticDisposition.Region)]));
+        DaggerfallTravelPolicy policy = new(Sites(), grids, DaggerfallTuning.Defaults.Transport);
+        DaggerfallTravelMapPixel from = new(10, Row), to = new(14, Row);
+        Assert.Contains(policy.OverlandRoute(from, to).Waypoints, pixel => policy.RegionAt(pixel) == 2);
+
+        DaggerfallOverlandRoute round = policy.OverlandRoute(from, to, [2]);
+        Assert.DoesNotContain(round.Waypoints, pixel => policy.RegionAt(pixel) == 2);
+        Assert.Equal(to, round.Waypoints[^1]);
+
+        // A band kept out of it walks that way, and rebuilds the same way from its save.
+        RoadWorld world = new();
+        DaggerfallExpedition expedition = new(policy, Sites(), DaggerfallExpeditionTuning.Default, world);
+        expedition.RegisterPersistentBand(new DaggerfallPersistentBandSave("convoy", "Convoy", DaggerfallBandKind.Convoy, from.X + .5, from.Y + .5, 90, 1,
+            Destination: new(to, null), AvoidRegions: [2]));
+        DaggerfallPersistentOverlandBand band = Assert.Single(expedition.PersistentBands);
+        Assert.Equal(round.Waypoints, band.ResolveRoute(policy)!.Waypoints);
+        DaggerfallExpedition restored = new(policy, Sites(), DaggerfallExpeditionTuning.Default, world, expedition.Capture());
+        Assert.Equal(round.Waypoints, Assert.Single(restored.PersistentBands).ResolveRoute(policy)!.Waypoints);
+        List<int> walked = [];
+        for (int step = 0; step < 40 && restored.PersistentBands.Count > 0; step++)
+        {
+            long at = world.Calendar.ToAbsoluteSeconds();
+            world.Calendar = DaggerfallCalendar.FromAbsoluteSeconds(at + 1800);
+            _ = restored.AdvancePersistentBandsOffMap(at, at + 1800, (from.X + .5, from.Y + .5));
+            if (restored.PersistentBands.FirstOrDefault() is { } moving) walked.Add(policy.RegionAt(new((int)moving.X, (int)moving.Y)));
+        }
+        Assert.Equal(["convoy"], world.Arrived);
+        Assert.DoesNotContain(2, walked);
+    }
+
     private static void Pass(DaggerfallExpedition expedition, RoadWorld world, long seconds, (double X, double Y) party)
     {
         long from = world.Calendar.ToAbsoluteSeconds();
