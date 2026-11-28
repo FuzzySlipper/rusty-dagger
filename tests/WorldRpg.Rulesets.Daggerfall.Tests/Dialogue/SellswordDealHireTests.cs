@@ -1,4 +1,7 @@
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.World;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Politics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -46,13 +49,29 @@ public sealed class SellswordDealHireTests
         Assert.Contains(dealt.PartyHire.TopicsFor(orc), topic => topic.Id == "hire-companion"
             && topic.Label.Contains("Orcish Sellsword", StringComparison.Ordinal) && topic.Label.EndsWith(quote.Deal, StringComparison.Ordinal));
 
-        // The deal ends: the sellsword still standing here will not sign, and the next visit finds none.
+        // While the deal stands the sellsword would drive the player's wagon too.
+        GrantCart(dealt);
+        dealt.State.Currency.ReceiveGold(500UL);
+        Assert.True(dealt.PartyHire.QuoteHire(orc, ActorPartyRole.Driver).Eligible);
+
+        // The deal ends: the sellsword still standing here will sign on for nothing, companion or driver, and the next
+        // visit finds none.
         Board board = dealt.PoliticalBoard!.Board;
         board.EndAgreement(board.Agreements.Single(open => open.Id == deal.Id), "test");
-        DaggerfallPartyHireQuote ended = dealt.PartyHire.QuoteHire(orc, ActorPartyRole.Companion);
-        Assert.False(ended.Eligible);
-        Assert.Equal("the deal that sent them here has ended", ended.RefusalReason);
+        foreach (ActorPartyRole role in new[] { ActorPartyRole.Companion, ActorPartyRole.Driver })
+        {
+            DaggerfallPartyHireQuote ended = dealt.PartyHire.QuoteHire(orc, role);
+            Assert.False(ended.Eligible);
+            Assert.Equal(DaggerfallPartyHireService.DealEndedReason, ended.RefusalReason);
+        }
+        IReadOnlyList<DaggerfallDialogueTopicOption> endedTopics = dealt.PartyHire.TopicsFor(orc);
+        Assert.Contains(endedTopics, topic => topic.Id == "hire-companion" && topic.Label.Contains(DaggerfallPartyHireService.DealEndedReason, StringComparison.Ordinal));
+        Assert.Contains(endedTopics, topic => topic.Id == "hire-driver" && topic.Label.Contains(DaggerfallPartyHireService.DealEndedReason, StringComparison.Ordinal));
+        ulong gold = dealt.State.Currency.Read().Gold;
         Assert.False(dealt.PartyHire.Resolve(orc, DaggerfallDialogueTopic.HireCompanion).Accepted);
+        Assert.False(dealt.PartyHire.Resolve(orc, DaggerfallDialogueTopic.HireDriver).Accepted);
+        Assert.Equal(gold, dealt.State.Currency.Read().Gold);
+        Assert.False(dealt.PartyHire.TryGetStagedHiredRole(orc.DurableId, out _));
         using DaggerfallSession after = fixture.Restore(dealt.CaptureSave());
         Assert.DoesNotContain(after.State.Npcs.All, npc => npc.Role == "orc-sellsword");
         Assert.Contains(after.State.Npcs.All, npc => npc.Role == "road-guard");
@@ -131,6 +150,14 @@ public sealed class SellswordDealHireTests
         Assert.Equal(["hire-mercenary", OrcSpec], session.PartyHire.SellswordSpecsAt(Charing.Region, tavern).Order(StringComparer.Ordinal));
         Assert.Equal(["hire-mercenary"], session.PartyHire.SellswordSpecsAt(Charing.Region, hall));
         Assert.Empty(session.PartyHire.SellswordSpecsAt(20, tavern)); // Sentinel, which neither side holds
+    }
+
+    private static void GrantCart(DaggerfallSession session)
+    {
+        DurableIdentityReference cart = new(DurableIdentityKind.Item, 900_011);
+        DaggerfallItemDefinition definition = TestPayload.Definitions.RequireItem(new DaggerfallItemId(DaggerfallTransportPolicy.CartItemId));
+        session.State.Inventory.GrantAtomic([new InventoryAtomicGrant(new InventoryItemId(DaggerfallTransportPolicy.CartItemId), UniqueItem: cart)]);
+        session.State.ItemInstances.RegisterUnique(cart.Value, DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player));
     }
 
     /// <summary>Puts a deal in force on the board at once: <paramref name="proposer"/> gives <paramref name="gives"/> for <paramref name="asks"/>.</summary>

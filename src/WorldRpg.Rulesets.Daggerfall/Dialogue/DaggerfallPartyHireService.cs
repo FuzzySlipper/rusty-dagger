@@ -72,6 +72,8 @@ internal sealed class DaggerfallPartyHireService
     internal const int HealingDraughtHealthAmount = 35;
     internal const int HealingDraughtMoraleBonus = 8;
     internal const int HazardBonusMoraleBonus = 15;
+    /// <summary>Why a sellsword a seat's deal sent will not sign on once the deal has ended (#11223).</summary>
+    internal const string DealEndedReason = "the deal that sent them here has ended";
 
     private const int TavernBuildingType = 15;
     private const int GuildHallBuildingType = 11;
@@ -220,9 +222,11 @@ internal sealed class DaggerfallPartyHireService
         if (_ownsCart() && !HasActiveDriver())
         {
             DaggerfallPartyHireQuote driverQuote = QuoteHire(npc, ActorPartyRole.Driver);
-            topics.Add(new("hire-driver", waived
-                ? "Drive my wagon (deposit waived)"
-                : $"Drive my wagon ({driverQuote.Deposit} gold)"));
+            topics.Add(new("hire-driver", !driverQuote.Eligible
+                ? $"Drive my wagon ({driverQuote.RefusalReason})"
+                : waived
+                    ? "Drive my wagon (deposit waived)"
+                    : $"Drive my wagon ({driverQuote.Deposit} gold)"));
         }
         return topics;
     }
@@ -266,6 +270,10 @@ internal sealed class DaggerfallPartyHireService
     {
         ArgumentNullException.ThrowIfNull(npc);
         bool depositWaived = _hasDepositWaiver(npc);
+        // A sellsword a seat's deal sent signs on for nothing once the deal has ended, as a driver or a companion (#11223).
+        if (IsDealRecruit(npc) && SellswordDealAt(npc.Site.Region, _currentBuilding(), ResolveSpecId(npc, null)) is null)
+            return new(role == ActorPartyRole.Driver ? "hire-driver" : ResolveSpecId(npc, explicitSpecId), 0UL, 0, CanDelveDungeons: false,
+                Eligible: false, RefusalReason: DealEndedReason);
         if (role == ActorPartyRole.Driver)
         {
             ulong driverFee = depositWaived ? 0UL : ApplyPricingAdjustments(npc.Site.Region, DriverHireFee, applySocialDiscount: true);
@@ -276,9 +284,6 @@ internal sealed class DaggerfallPartyHireService
         DaggerfallActorSpawnerSpec? spec = _partyHireSpecs.TryGetValue(specId, out DaggerfallActorSpawnerSpec? found) ? found : null;
         DaggerfallPartyHireTerms? terms = spec?.HireTerms;
         DaggerfallSellswordDeal? deal = SellswordDealAt(npc.Site.Region, _currentBuilding(), specId);
-        if (deal is null && IsDealRecruit(npc))
-            return new(specId, 0UL, terms?.BaseDailyWage ?? DefaultDailyWage, terms?.CanDelveDungeons ?? false, Eligible: false,
-                RefusalReason: "the deal that sent them here has ended");
         int dealPercent = deal is null ? 0 : DealPercent(deal);
 
         int baseDeposit = terms?.BaseDeposit ?? (int)CompanionHireFee;
