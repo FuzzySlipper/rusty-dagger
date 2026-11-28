@@ -23,8 +23,17 @@ internal sealed class DaggerfallBoardStandingRipple(
     /// (<see cref="DaggerfallSocialState.StandingGained"/>): the opposed seats take their share of it, the political share
     /// for a political quest.
     /// </summary>
-    internal void ObserveGain(int factionId, int amount, DaggerfallStandingGain gain) => Ripple(factionId, amount,
-        gain == DaggerfallStandingGain.Political ? tuning.PoliticalStandingPercent : tuning.OpposedStandingPercent);
+    internal void ObserveGain(int factionId, int amount, DaggerfallStandingGain gain)
+    {
+        if (gain != DaggerfallStandingGain.Rippled)
+            Ripple(factionId, -amount, gain == DaggerfallStandingGain.Political ? tuning.PoliticalStandingPercent : tuning.OpposedStandingPercent);
+    }
+
+    /// <summary>
+    /// The player's standing with <paramref name="factionId"/> fell by <paramref name="amount"/> for a deed its enemies
+    /// welcome, a raid on its convoy (#11181): the opposed seats gain their share, a gain that ripples no further.
+    /// </summary>
+    internal void ObserveLoss(int factionId, int amount) => Ripple(factionId, amount, tuning.OpposedStandingPercent);
 
     /// <summary>The seats the live board sets against <paramref name="seat"/>: at war with it on the other side, or hostile to it.</summary>
     internal IReadOnlyList<string> Opposed(string seat) =>
@@ -32,12 +41,13 @@ internal sealed class DaggerfallBoardStandingRipple(
             && (board.Board.Relation(seat, other) <= Supply.Hostile
                 || board.Board.Wars.Any(war => war.Side(seat) is { } mine && war.Side(other) is { } theirs && mine != theirs)))];
 
-    private void Ripple(int factionId, int amount, int percent)
+    /// <summary>The opposed seats' share, <paramref name="percent"/> of <paramref name="change"/>, the opposite way: a gain they resent, a loss they welcome.</summary>
+    private void Ripple(int factionId, int change, int percent)
     {
-        int loss = amount * percent / 100;
-        if (loss <= 0 || board.SeatOfFaction(factionId) is not { } seat) return;
+        int share = change * percent / 100;
+        if (share == 0 || board.SeatOfFaction(factionId) is not { } seat) return;
         foreach (string opposed in Opposed(seat))
             if (seats.TryGetBySeatId(opposed, out DaggerfallBoardSeatBinding? binding))
-                social.ChangeFactionReputation(binding!.OfficeFactionId, -loss, DaggerfallFactionReputationChange.Propagate);
+                social.ChangeFactionReputation(binding!.OfficeFactionId, share, DaggerfallFactionReputationChange.Propagate, DaggerfallStandingGain.Rippled);
     }
 }

@@ -36,7 +36,11 @@ internal sealed record DaggerfallExpeditionView(
     bool CanLeave, bool CanEnter, string EnterLabel,
     DaggerfallExpeditionEncounterView? Encounter, bool Teleporting, string? TeleportPlace,
     string? Message, IReadOnlyList<DaggerfallTravelDestination> Found,
-    IReadOnlyList<DaggerfallExpeditionBandView> Bands);
+    IReadOnlyList<DaggerfallExpeditionBandView> Bands)
+{
+    /// <summary>The sides the player may take with a convoy come upon, beyond approaching and passing it by (#11181): defend, join-raiders, raid.</summary>
+    internal IReadOnlyList<string> ConvoySides { get; init; } = [];
+}
 
 /// <summary>
 /// The world map: the atlas to browse, with where the party or the player stands, where the party heads, the pin and the
@@ -71,7 +75,8 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
     Func<DaggerfallTransportActionResult> boardShip, Func<DaggerfallTransportActionResult> leaveShip,
     Action<DaggerfallTransportActionResult> applyTransportChange, PresentationState presentation,
     DaggerfallOverlandMap overland, Func<DaggerfallTravelMapPixel> playerPixel,
-    Func<string, (string? Faction, string? Detail)>? describePersistentBand = null, DaggerfallRealmsMap? realms = null)
+    Func<string, (string? Faction, string? Detail)>? describePersistentBand = null, DaggerfallRealmsMap? realms = null,
+    DaggerfallRationConvoys? convoys = null)
 {
     private DaggerfallTravelMap? _map;
     private bool _worldMapOpen;
@@ -109,6 +114,16 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
             case DaggerfallUiActionKind.ExpeditionShip: _ = expedition.ToggleShip(); break;
             case DaggerfallUiActionKind.ExpeditionLeave: _ = expedition.Leave(); break;
             case DaggerfallUiActionKind.ExpeditionEnter: enterExpedition(); break;
+            // Taking a side with a convoy come upon meets it on that side (#11181).
+            case DaggerfallUiActionKind.ExpeditionSide:
+                if (expedition.BandAhead?.PersistentBandId is { } convoyBand && convoys?.Choose(convoyBand, action.Mode switch
+                    {
+                        "defend" => DaggerfallConvoySide.Defend,
+                        "join-raiders" => DaggerfallConvoySide.JoinRaiders,
+                        _ => DaggerfallConvoySide.Raid,
+                    }) == true)
+                    enterExpedition();
+                break;
             case DaggerfallUiActionKind.ExpeditionView:
                 IReadOnlyList<double> move = action.View!;
                 overland.View.Move(move[0], move[1], move[2], move[3], move[4]);
@@ -192,7 +207,17 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
             expedition.CanLeave, expedition.Teleporting ? teleport is not null : !atSea && expedition.Held is null,
             expedition.Teleporting ? "Teleport" : here is not null && expedition.Known(here.Id) ? $"Enter {here.Name}" : "Enter",
             Encounter(), expedition.Teleporting, teleport?.Name,
-            expedition.Message, expedition.Found, bands);
+            expedition.Message, expedition.Found, bands)
+        {
+            ConvoySides = expedition.BandAhead is { PersistentBandId: { } ahead } band && convoys is not null
+                ? [.. convoys.Sides(ahead, band.IsClash).Select(side => side switch
+                {
+                    DaggerfallConvoySide.Defend => "defend",
+                    DaggerfallConvoySide.JoinRaiders => "join-raiders",
+                    _ => "raid",
+                })]
+                : [],
+        };
     }
 
     private DaggerfallExpeditionBandView EnrichBand(DaggerfallExpeditionBandView band)

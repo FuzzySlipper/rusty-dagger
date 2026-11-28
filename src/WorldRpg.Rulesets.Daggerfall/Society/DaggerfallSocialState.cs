@@ -12,12 +12,14 @@ internal enum DaggerfallFactionReputationChange
 
 /// <summary>
 /// What earned a rise in standing, for the board's opposed seats (<see cref="DaggerfallBoardStandingRipple"/>): ordinary
-/// help, or a political quest, which the opposed seats resent in full.
+/// help, a political quest, which the opposed seats resent in full, or a ripple of the board's quarrels itself, which
+/// ripples no further.
 /// </summary>
 internal enum DaggerfallStandingGain
 {
     Ordinary,
     Political,
+    Rippled,
 }
 
 /// <summary>One guild membership under the donor's social-group exclusivity rule.</summary>

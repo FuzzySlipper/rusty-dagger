@@ -1128,6 +1128,8 @@ internal sealed partial class DaggerfallSession
                 onTrafficMemberReturned: id => _ = State.Merchants.RetireProvider(id));
             if (saved?.Expedition.PendingTransientClashes is { Length: > 0 } pendingClashes)
                 OverlandParties.RestorePendingTransientClashes(pendingClashes);
+            OverlandParties.SidesStaged += RationConvoys.Staged;                                     // Society: a met convoy's sides (#11181)
+            RationConvoys.BindFight(this);
             OverlandTraffic = new DaggerfallOverlandTraffic(
                 definitions, State.ActorLedger, actors, State.Npcs, Expedition, OverlandParties,
                 questNames.NpcName, () => _worldSocialSeed, () => _site.ActiveSite?.Id);
@@ -1742,7 +1744,7 @@ internal sealed partial class DaggerfallSession
                 definitions.WorldNames, _atlasTiles, () => _classicArt, State.Transport, State.Wagon, State.Inventory, _inventoryUi,
                 _hud.RequestTravelPlaces, TransportAccess, OpenExpedition, EnterExpedition, BoardPropertyShip, LeavePropertyShip,
                 ApplyTransportChange, Presentation, _overland, MapPosition.Position, DescribePersistentExpeditionBand,
-                new DaggerfallRealmsMap(definitions, RealmArms));
+                new DaggerfallRealmsMap(definitions, RealmArms), RationConvoys);
             DaggerfallServiceCounter counter = new(() => _dialogue, CurrentInteriorBuilding, _site, () => _sites.ActiveProfile, _activationPresentation);
             DaggerfallMakerPanels makers = new(_itemMaker, _potionMaker, definitions, counter, Presentation);
             SummoningPanel = new DaggerfallSummoningPanel(Summoning, State.Quests, Cinematics, composition.VideosEnabled, counter,

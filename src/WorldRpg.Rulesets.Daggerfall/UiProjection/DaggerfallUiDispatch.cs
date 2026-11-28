@@ -269,6 +269,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case DaggerfallUiActionKind.AtlasTiles: travel.GrantAtlasTiles(action); break;
             // Entering changes the world, so it takes the update's one explicit interval, as a rest does.
             case DaggerfallUiActionKind.ExpeditionEnter:
+            case DaggerfallUiActionKind.ExpeditionSide:
                 if (!elapsedSubmitted) { elapsedSubmitted = true; travel.Change(action); }
                 break;
             case DaggerfallUiActionKind.ExpeditionSpeed:

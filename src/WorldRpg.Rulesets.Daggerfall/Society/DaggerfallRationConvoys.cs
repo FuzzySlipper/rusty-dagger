@@ -23,8 +23,17 @@ internal sealed record DaggerfallRationConvoySave(
     [property: JsonRequired] DaggerfallSiteIdSave[] Stops,
     [property: JsonRequired] int Leg,
     [property: JsonRequired] int Turn,
-    [property: JsonRequired] long[] Riders)
+    [property: JsonRequired] long[] Riders,
+    DaggerfallConvoySide? Side = null,
+    long[]? Raiders = null,
+    bool StruckConvoy = false,
+    bool StruckRaiders = false,
+    bool Raided = false)
 {
+    /// <summary>The convoy's guards, who fight; the first aboard is its drover, who does not.</summary>
+    [JsonIgnore]
+    internal IEnumerable<long> Guards => Riders.Skip(1);
+
     /// <summary>The town the convoy's ration is bound for.</summary>
     [JsonIgnore]
     internal DaggerfallSiteIdSave Destination => Stops[^1];
@@ -43,6 +52,24 @@ internal sealed record DaggerfallRationConvoySave(
         if (Riders is not { Length: > 0 }) throw new ArgumentException($"Ration convoy '{BandId}' has no one aboard.", nameof(Riders));
         return this;
     }
+}
+
+/// <summary>
+/// The side the player took with a convoy they came upon (#11181): approached it in peace, defended it from its raiders,
+/// joined its raiders, or raided it.
+/// </summary>
+internal enum DaggerfallConvoySide { Approach, Defend, JoinRaiders, Raid }
+
+/// <summary>
+/// What a convoy fight asks of the world (#11181): to make an actor fight beside the player or against them, and to bring
+/// the crime and standing of a raid, or the standing of a defence that saw the convoy through.
+/// </summary>
+internal interface IDaggerfallConvoyFight
+{
+    void Ally(long actorId);
+    void Foe(long actorId);
+    void Raided(DaggerfallRationConvoySave convoy);
+    void Defended(DaggerfallRationConvoySave convoy);
 }
 
 /// <summary>
@@ -70,6 +97,7 @@ internal sealed class DaggerfallRationConvoys(
     private readonly Dictionary<string, DaggerfallRationConvoySave> _convoys = new(StringComparer.Ordinal);
     private Action<WorldNudge>? _report;
     private Action<DaggerfallRationConvoySave, string?, long>? _lost;
+    private IDaggerfallConvoyFight? _fight;
 
     internal IReadOnlyCollection<DaggerfallRationConvoySave> All => _convoys.Values;
 
@@ -80,6 +108,88 @@ internal sealed class DaggerfallRationConvoys(
     internal void BindLossNews(Action<DaggerfallRationConvoySave, string?, long> lost) => _lost = lost;
 
     internal bool TryGet(string bandId, out DaggerfallRationConvoySave? convoy) => _convoys.TryGetValue(bandId, out convoy);
+
+    /// <summary>Binds what a convoy fight asks of the world (#11181).</summary>
+    internal void BindFight(IDaggerfallConvoyFight fight) => _fight = fight;
+
+    /// <summary>
+    /// The sides the player may take with the convoy on band <paramref name="bandId"/>, come upon on the map, beyond
+    /// approaching it and passing it by (#11181): under attack, defend it or join its raiders; quiet, raid it. None for a
+    /// band that is no convoy.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallConvoySide> Sides(string bandId, bool underAttack) =>
+        !_convoys.ContainsKey(bandId) ? []
+        : underAttack ? [DaggerfallConvoySide.Defend, DaggerfallConvoySide.JoinRaiders]
+        : [DaggerfallConvoySide.Raid];
+
+    /// <summary>
+    /// The player takes <paramref name="side"/> with the convoy on band <paramref name="bandId"/> as they meet it. Joining
+    /// its raiders or raiding it is a raid at once: its crime and standing fall on the player.
+    /// </summary>
+    internal bool Choose(string bandId, DaggerfallConvoySide side)
+    {
+        if (!_convoys.TryGetValue(bandId, out DaggerfallRationConvoySave? convoy)) return false;
+        _convoys[bandId] = convoy = convoy with { Side = side };
+        if (side is DaggerfallConvoySide.JoinRaiders or DaggerfallConvoySide.Raid) Raid(convoy);
+        return true;
+    }
+
+    /// <summary>
+    /// The scene staged the convoy on band <paramref name="bandId"/> met on the map, its people among
+    /// <paramref name="primary"/> and its raiders <paramref name="rivals"/>: each takes the side the player chose against
+    /// or beside them. Its guards fight beside a defender and against a raider; its raiders beside one who joined them.
+    /// </summary>
+    internal void Staged(string bandId, IReadOnlyList<long> primary, IReadOnlyList<long> rivals)
+    {
+        if (!_convoys.TryGetValue(bandId, out DaggerfallRationConvoySave? convoy) || _fight is null) return;
+        DaggerfallConvoySide side = convoy.Side ?? DaggerfallConvoySide.Approach;
+        _convoys[bandId] = convoy = convoy with { Side = side, Raiders = [.. (convoy.Raiders ?? []).Union(rivals)] };
+        long[] guards = [.. convoy.Guards.Where(primary.Contains)];
+        switch (side)
+        {
+            case DaggerfallConvoySide.Defend:
+                foreach (long guard in guards) _fight.Ally(guard);
+                break;
+            case DaggerfallConvoySide.JoinRaiders:
+                foreach (long raider in rivals) _fight.Ally(raider);
+                foreach (long guard in guards) _fight.Foe(guard);
+                break;
+            case DaggerfallConvoySide.Raid:
+                foreach (long guard in guards) _fight.Foe(guard);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The player struck <paramref name="actorId"/> (#11181). Who they hurt overrides the side they chose: striking a
+    /// convoy's people raids it, turning its guards on them if they came as its friend; striking raiders they joined turns
+    /// those raiders on them. Each strike is remembered for the credit a defence needs.
+    /// </summary>
+    internal void Struck(long actorId)
+    {
+        foreach (DaggerfallRationConvoySave convoy in _convoys.Values.Where(convoy => convoy.Side is not null).ToArray())
+        {
+            if (convoy.Riders.Contains(actorId))
+            {
+                DaggerfallRationConvoySave struck = _convoys[convoy.BandId] = convoy with { StruckConvoy = true };
+                if (!struck.Raided) Raid(struck);
+                if (struck.Side is DaggerfallConvoySide.Defend or DaggerfallConvoySide.Approach)
+                    foreach (long guard in struck.Guards) _fight?.Foe(guard);
+            }
+            else if (convoy.Raiders?.Contains(actorId) == true)
+            {
+                _convoys[convoy.BandId] = convoy with { StruckRaiders = true };
+                if (convoy.Side == DaggerfallConvoySide.JoinRaiders && !convoy.StruckRaiders)
+                    foreach (long raider in convoy.Raiders) _fight?.Foe(raider);
+            }
+        }
+    }
+
+    private void Raid(DaggerfallRationConvoySave convoy)
+    {
+        DaggerfallRationConvoySave raided = _convoys[convoy.BandId] = _convoys[convoy.BandId] with { Raided = true };
+        _fight?.Raided(raided);
+    }
 
     /// <summary>
     /// Sends <paramref name="giver"/>'s ration under <paramref name="agreement"/> from the first of <paramref name="towns"/>
@@ -145,10 +255,15 @@ internal sealed class DaggerfallRationConvoys(
         return Arrived(band.BandId);
     }
 
-    /// <summary>A convoy whose band is gone from the map without being lost (one the player met) came through.</summary>
+    /// <summary>
+    /// A convoy whose band is gone from the map without being lost (one the player met) came through. A defender who hurt
+    /// its raiders, and never it, earns the standing of seeing it through (#11181); watching earns nothing.
+    /// </summary>
     internal bool Arrived(string bandId)
     {
         if (!_convoys.Remove(bandId, out DaggerfallRationConvoySave? convoy)) return false;
+        if (convoy is { Side: DaggerfallConvoySide.Defend or DaggerfallConvoySide.Approach, StruckRaiders: true, Raided: false })
+            _fight?.Defended(convoy);
         DaggerfallRoadEnvoys.Release(actorLedger, bandId, SlotPrefix, convoy.Riders);
         _report?.Invoke(new RationArrived(convoy.Agreement, convoy.Giver));
         return true;

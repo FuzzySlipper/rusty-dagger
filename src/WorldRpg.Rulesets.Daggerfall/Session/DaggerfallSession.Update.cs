@@ -1728,6 +1728,8 @@ internal sealed partial class DaggerfallSession
             _appearance.ReactPlayerHurt(hurt, State.Character.Race.Id, State.Character.Identity.Gender == DaggerfallCharacterGender.Female,
                 State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Maximum.Value);   // Scene
         if (fact is ActorStruckFact struck) StrikeFeel.Feel(struck);                              // Combat
+        if (fact is DamageAppliedFact { SourceActorId: DaggerfallActorIdentity.PlayerEntityId } dealt)
+            RationConvoys.Struck(dealt.TargetActorId);                                            // Society: who the player hurt in a convoy fight (#11181)
         if (fact is AttackHitFact hit)
         {
             Crimes.ObserveHit(hit);                                                               // Society

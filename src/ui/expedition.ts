@@ -87,7 +87,16 @@ export interface ExpeditionProjection {
   readonly message: string | null;
   readonly found: readonly ExpeditionFoundProjection[];
   readonly bands: readonly ExpeditionBandProjection[];
+  /** The sides the party may take with a convoy it has come upon, beyond meeting it (Enter) and passing it by. */
+  readonly convoySides?: readonly ConvoySide[];
 }
+
+/** A side with a ration convoy: defend it from its raiders, join them, or raid it. */
+export type ConvoySide = 'defend' | 'join-raiders' | 'raid';
+
+const CONVOY_SIDE_LABELS: Readonly<Record<ConvoySide, string>> = {
+  defend: 'Defend the convoy', 'join-raiders': 'Join the raiders', raid: 'Raid the convoy',
+};
 
 export type ExpeditionAction =
   | { readonly action: 'expedition-open' | 'expedition-stop' | 'expedition-ship' | 'expedition-leave' | 'expedition-enter' | 'expedition-follow' }
@@ -96,6 +105,7 @@ export type ExpeditionAction =
   | { readonly action: 'expedition-go' | 'expedition-pin'; readonly x: number; readonly y: number; readonly region?: number; readonly index?: number }
   | { readonly action: 'expedition-pin' }
   | { readonly action: 'expedition-find'; readonly text: string }
+  | { readonly action: 'expedition-side'; readonly mode: ConvoySide }
   | { readonly action: 'expedition-look'; readonly x: number; readonly y: number }
   | { readonly action: 'expedition-go-at' | 'expedition-pin-at'; readonly point: readonly [number, number] }
   /** Moves the view: [turn degrees clockwise, tilt degrees steeper, right and forward in eye distances, zoom steps nearer]. */
@@ -284,7 +294,12 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   leave.dataset.escape = '';
   const enter = button('Enter');
   enter.className = 'dagger-expedition-enter';
-  exits.append(menuButton, leave, enter);
+  // A convoy come upon offers sides beyond meeting it: each meets it on that side.
+  const sides = document.createElement('div');
+  sides.className = 'dagger-expedition-sides';
+  sides.setAttribute('role', 'group');
+  sides.setAttribute('aria-label', 'Take a side');
+  exits.append(menuButton, leave, sides, enter);
   bottom.append(modes, vitals, status, exits);
 
   // A waiting encounter must be entered: a centred panel over the dimmed map names it, its Enter focused. The bottom
@@ -624,6 +639,16 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
     leave.hidden = !state.canLeave;
     enter.textContent = state.enterLabel;
     enter.disabled = !state.canEnter;
+    redraw(sides, JSON.stringify(state.convoySides ?? []), () => {
+      sides.replaceChildren();
+      for (const side of state.convoySides ?? []) {
+        const choose = button(CONVOY_SIDE_LABELS[side]);
+        choose.dataset.side = side;
+        choose.addEventListener('click', () => claim({ action: 'expedition-side', mode: side }));
+        sides.append(choose);
+      }
+    });
+    sides.hidden = (state.convoySides ?? []).length === 0;
     encounterPanel.hidden = state.encounter === null;
     encounterTitle.textContent = state.encounter?.title ?? '';
     encounterLine.textContent = state.encounter?.line ?? '';

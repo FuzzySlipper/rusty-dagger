@@ -566,6 +566,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("teleportPlace", view.TeleportPlace is null ? builder.Null() : builder.String(view.TeleportPlace)),
             ("message", view.Message is null ? builder.Null() : builder.String(view.Message)),
             ("found", Found(builder, view.Found)),
+            ("convoySides", builder.Array(view.ConvoySides.Select(side => builder.String(side)).ToArray())),
             ("bands", builder.Array(view.Bands.Select(band => builder.Object(
                 ("id", builder.Number(band.Id)),
                 ("name", builder.String(band.Name)), ("kind", builder.String(band.Kind.ToString().ToLowerInvariant())),

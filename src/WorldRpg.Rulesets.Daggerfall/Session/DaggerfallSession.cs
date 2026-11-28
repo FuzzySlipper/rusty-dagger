@@ -39,6 +39,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
 internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession, IQuitRequestingGameSession,
     IDaggerfallSiteTransitionHost, IDaggerfallRestSurroundings, IDaggerfallExpeditionSurroundings, IDaggerfallTeleportSites, IDaggerfallTransformationConsumer,
+    IDaggerfallConvoyFight,
     IDaggerfallMusicPlace, IPresentationYieldingSession
 {
     private readonly DaggerfallGameRandom _random;
@@ -997,6 +998,53 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             : $"The wagons of grain {giver} sent to {receiver} never reached {town.Name}. Soldiers of {board.Board.Seat(raider).Name} took them on the road.";
         WordSpread.RecordNews($"convoy:{convoy.BandId}:lost", $"Grain Convoy Lost on the Road to {town.Name}", body, town,
             second / DaggerfallCalendar.SecondsPerMinute, _definitions.BoardSeats.TryGetBySeatId(convoy.Giver, out DaggerfallBoardSeatBinding? seat) ? seat?.OfficeFactionId : null);
+    }
+
+    /// <summary>A convoy fighter takes the player's side (#11181): a combatant on the player's team, no longer forced hostile.</summary>
+    void IDaggerfallConvoyFight.Ally(long actorId)
+    {
+        if (!State.Actors.TryGet(actorId, out ActorState? actor) || actor.IsDefeated) return;
+        actor.Actor.Get<ActorHarmPolicy>().Set(ActorHarmPolicyKind.Combatant);
+        actor.Actor.Get<FactionComponent>().SetTeamOverride("player-ally");
+        if (actor.Actor.TryGet<DaggerfallEnemyPerceptionMemory>(out DaggerfallEnemyPerceptionMemory? memory))
+        {
+            memory.SetForcedHostile(false);
+            memory.LairTruce = false;
+        }
+    }
+
+    /// <summary>A convoy fighter turns on the player (#11181): a combatant off the player's team, hostile and roused.</summary>
+    void IDaggerfallConvoyFight.Foe(long actorId)
+    {
+        if (!State.Actors.TryGet(actorId, out ActorState? actor) || actor.IsDefeated) return;
+        actor.Actor.Get<ActorHarmPolicy>().Set(ActorHarmPolicyKind.Combatant);
+        if (actor.Actor.Get<FactionComponent>().TeamOverride == "player-ally") actor.Actor.Get<FactionComponent>().SetTeamOverride(null);
+        _enemyBehavior.MakeHostile(actorId, includePlayerAllies: true);
+        _enemyBehavior.Provoke(actorId, _time.Calendar.MinuteNumber);
+    }
+
+    /// <summary>
+    /// The player raided a convoy (#11181): the theft of its grain is a crime in the region they are in, reported by its
+    /// people, and costs standing with its giver and receiver, a loss the seats hostile to them welcome.
+    /// </summary>
+    void IDaggerfallConvoyFight.Raided(DaggerfallRationConvoySave convoy)
+    {
+        int region = _site.ActiveSite?.Region ?? convoy.Origin.Require().Region;
+        Crimes.ReportConvoyRaid($"convoy-raid:{convoy.BandId}", region, convoy.Riders);
+        foreach (string seat in new[] { convoy.Giver, convoy.Receiver })
+            if (_definitions.BoardSeats.TryGetBySeatId(seat, out DaggerfallBoardSeatBinding? binding) && binding is not null)
+            {
+                State.Social.ChangeFactionReputation(binding.OfficeFactionId, -_tuning.Politics.ConvoyRaidStanding, DaggerfallFactionReputationChange.Propagate);
+                StandingRipple?.ObserveLoss(binding.OfficeFactionId, _tuning.Politics.ConvoyRaidStanding);
+            }
+    }
+
+    /// <summary>The player saw a convoy through its raiders (#11181): standing with its giver and receiver, which their enemies resent.</summary>
+    void IDaggerfallConvoyFight.Defended(DaggerfallRationConvoySave convoy)
+    {
+        foreach (string seat in new[] { convoy.Giver, convoy.Receiver })
+            if (_definitions.BoardSeats.TryGetBySeatId(seat, out DaggerfallBoardSeatBinding? binding) && binding is not null)
+                State.Social.ChangeFactionReputation(binding.OfficeFactionId, _tuning.Politics.ConvoyDefenceStanding, DaggerfallFactionReputationChange.Propagate);
     }
 
     void IDaggerfallExpeditionSurroundings.PersistentBandDelayed(DaggerfallPersistentOverlandBand band, long seconds) =>

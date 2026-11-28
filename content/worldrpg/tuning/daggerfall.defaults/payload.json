@@ -105,7 +105,9 @@
     "politicalStandingPercent": 100,
     "politicalOfferPercent": 25,
     "carryWordInfluence": 2,
-    "undermineInfluence": 1
+    "undermineInfluence": 1,
+    "convoyRaidStanding": 10,
+    "convoyDefenceStanding": 10
   },
   "normalLight": {
     "distance": 1.4,

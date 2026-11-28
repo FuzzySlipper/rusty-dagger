@@ -497,6 +497,12 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     /// facing each other, whether the rival is persistent or transient) and stages travelling <c>Driver</c>/<c>Companion</c>
     /// party members on foot with their exact durable IDs.
     /// </summary>
+    /// <summary>
+    /// A met band's sides stood in the scene: the band's id, its own people placed, and the rivals it was fighting placed so
+    /// far (none for a band met alone). Raised again as late rivals find room, with all of them.
+    /// </summary>
+    internal event Action<string, IReadOnlyList<long>, IReadOnlyList<long>>? SidesStaged;
+
     internal void OnEnterSceneFromExpedition(DaggerfallSiteProfile activeProfile, WorldPoint landingLocalPose, float landingYaw)
     {
         ArgumentNullException.ThrowIfNull(activeProfile);
@@ -509,7 +515,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             {
                 if (!intercept.IsClash)
                 {
-                    _ = DeliverBandMembers(intercept.BandId, activeProfile.ProfileKey, landingLocalPose, landingYaw);
+                    SidesStaged?.Invoke(intercept.BandId, DeliverBandMembers(intercept.BandId, activeProfile.ProfileKey, landingLocalPose, landingYaw), []);
                     continue;
                 }
 
@@ -524,6 +530,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                         rivalBandId, activeProfile.ProfileKey, landingLocalPose, landingYaw,
                         inClash: true, facingOffset: MathF.PI, forwardDistance: 9.0f));
                     OrientClashSidesFacingEachOther(primaryIds, rivalIds);
+                    SidesStaged?.Invoke(intercept.BandId, primaryIds, rivalIds);
                 }
                 else if (intercept.TransientRivalMobileId is int rivalMobileId
                     && intercept.TransientRivalSize > 0
@@ -599,7 +606,10 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         }
 
         if (placedThisCall > 0)
+        {
             OrientClashSidesFacingEachOther(pending.PrimaryActorIds, pending.SpawnedRivalIds);
+            SidesStaged?.Invoke(pending.BandId, pending.PrimaryActorIds, [.. pending.SpawnedRivalIds]);
+        }
         return placedThisCall;
     }
 

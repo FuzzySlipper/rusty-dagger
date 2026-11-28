@@ -612,6 +612,8 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-expedition[data-encounter="true"] .dagger-expedition-message { color: #ff9a6a; font-style: normal; font-weight: 700; }
 .dagger-expedition-exits { display: flex; gap: .4rem; }
 .dagger-expedition-exits [hidden] { display: none; }
+/* A convoy come upon: the sides the party may take with it, before Enter. */
+.dagger-expedition-sides { display: flex; gap: .4rem; }
 .dagger-expedition-enter { min-width: 9rem; }
 .dagger-atlas-destination, .dagger-atlas-pin { width: .9rem; height: .9rem; pointer-events: none; z-index: 3; }
 .dagger-atlas-destination { border: 2px solid #7a1f12; border-radius: 50%; background: rgb(242 230 196 / .6); }

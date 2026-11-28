@@ -85,6 +85,19 @@ internal sealed class DaggerfallCrimes(
     }
 
     /// <summary>
+    /// The player raided a court's ration convoy on the road (#11181): the theft of its grain in <paramref name="region"/>,
+    /// seen by the convoy's own people, who report it as victims do. Once for each <paramref name="operation"/>.
+    /// </summary>
+    internal void ReportConvoyRaid(string operation, int region, IReadOnlyList<long> convoyPeople)
+    {
+        ArgumentNullException.ThrowIfNull(convoyPeople);
+        if (convoyPeople.Count == 0) throw new ArgumentException("A raided convoy has someone aboard to report it.", nameof(convoyPeople));
+        DaggerfallCrimeWitnessEvidence evidence = new(DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, [.. convoyPeople.Distinct().Order()]);
+        Report(new(operation, DaggerfallCrimeKind.Theft, DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId,
+            convoyPeople[0], region, calendar().MinuteNumber, DaggerfallCrimeTargetKind.Civilian, evidence, DaggerfallCrimeGuildCredit.None));
+    }
+
+    /// <summary>
     /// A sleeping resident inside a non-player-owned house woke up and caught the player inside at night (#11139):
     /// records a completed trespassing incident witnessed by the awakened household residents so the canonical
     /// crime and law owners respond.
