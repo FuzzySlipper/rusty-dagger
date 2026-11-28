@@ -77,6 +77,57 @@ public sealed class ConvoyGuardJobTests
     }
 
     [Fact]
+    public void Ridden_to_its_destination_the_party_stands_there_the_map_halts_and_the_job_pays_once()
+    {
+        using DaggerfallSession session = FreshSession(tuning: QuietRoad());
+        (DaggerfallRationConvoySave convoy, DaggerfallSiteRecord origin, DaggerfallNpc factor) = MusteringConvoy(session);
+        Assert.True(session.TakeConvoyGuard(factor, convoy.BandId, origin).Accepted);
+        DaggerfallSiteRecord destination = TestPayload.Definitions.Locations.Records.Single(site => site.Id == convoy.Destination.Require());
+        ulong gold = session.State.Currency.Read().Gold;
+        session.Expedition.Begin(new(origin.MapPixelX, origin.MapPixelY), aboardOwnShip: false);
+        session.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+
+        // Going on after each halt (the muster, each stop), the party rides the whole road with the convoy.
+        for (int step = 0; step < 4000 && session.ConvoyGuard.Hire is not null; step++)
+        {
+            if (!session.Expedition.Running) session.Expedition.SetSpeed(session.Expedition.Tuning.Speeds);
+            _ = session.Expedition.Advance(0.25);
+        }
+
+        Assert.Null(session.ConvoyGuard.Hire);
+        Assert.Equal(gold + (ulong)Politics.ConvoyGuardPay, session.State.Currency.Read().Gold);
+        Assert.Equal(new DaggerfallTravelMapPixel(destination.MapPixelX, destination.MapPixelY), session.Expedition.Party);
+        Assert.False(session.Expedition.Running);
+        Assert.Null(session.Expedition.RidingWith);
+        Assert.Contains("reaches", session.Expedition.Message);
+        // Taken up again, the map pays nothing more.
+        session.Expedition.SetSpeed(session.Expedition.Tuning.Speeds);
+        _ = session.Expedition.Advance(0.25);
+        Assert.Equal(gold + (ulong)Politics.ConvoyGuardPay, session.State.Currency.Read().Gold);
+    }
+
+    [Fact]
+    public void Riding_with_the_convoy_the_party_meets_no_band_of_the_map_however_near()
+    {
+        using DaggerfallSession session = FreshSession(tuning: QuietRoad());
+        (DaggerfallRationConvoySave convoy, DaggerfallSiteRecord origin, DaggerfallNpc factor) = MusteringConvoy(session);
+        Assert.True(session.TakeConvoyGuard(factor, convoy.BandId, origin).Accepted);
+        session.Expedition.Begin(new(origin.MapPixelX, origin.MapPixelY), aboardOwnShip: false);
+        DaggerfallPersistentOverlandBand ridden = Ride(session, convoy.BandId, until: band => band.RouteStep >= 2);
+
+        // A hostile band on the party's pixel, which would catch a party travelling alone.
+        (double x, double y) = session.Expedition.Position;
+        session.Expedition.RegisterPersistentBand(new DaggerfallPersistentBandSave("test:raiders", "Raiders", DaggerfallBandKind.Bandits,
+            x, y, 0, 0, Hostile: true, Spotted: true));
+        int before = ridden.RouteStep;
+        _ = Ride(session, convoy.BandId, until: band => band.RouteStep >= before + 2);
+
+        Assert.False(session.Expedition.EncounterWaiting);
+        Assert.Equal(convoy.BandId, session.Expedition.RidingWith);
+        Assert.Contains(session.Expedition.PersistentBands, band => band.BandId == "test:raiders");
+    }
+
+    [Fact]
     public void Leaving_at_a_stop_letting_it_go_on_alone_or_losing_it_pays_nothing()
     {
         // Left at a stop: the muster in its town is its first.
@@ -239,6 +290,7 @@ public sealed class ConvoyGuardJobTests
         {
             DaggerfallPersistentOverlandBand band = Assert.Single(session.Expedition.PersistentBands, band => band.BandId == bandId);
             if (until(band)) return band;
+            Assert.False(session.Expedition.EncounterWaiting, session.Expedition.Message);
             if (!session.Expedition.Running) session.Expedition.SetSpeed(session.Expedition.Tuning.Speeds);
             _ = session.Expedition.Advance(0.25);
         }
