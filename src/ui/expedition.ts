@@ -89,6 +89,10 @@ export interface ExpeditionProjection {
   readonly bands: readonly ExpeditionBandProjection[];
   /** The sides the party may take with a convoy it has come upon, beyond meeting it (Enter) and passing it by. */
   readonly convoySides?: readonly ConvoySide[];
+  /** The convoy the party rides with as its hired guard, or null. */
+  readonly convoyRide?: string | null;
+  /** Whether the party may leave the convoy it guards here, at one of its stops. */
+  readonly canLeaveConvoy?: boolean;
 }
 
 /** A side with a ration convoy: defend it from its raiders, join them, or raid it. */
@@ -99,7 +103,7 @@ const CONVOY_SIDE_LABELS: Readonly<Record<ConvoySide, string>> = {
 };
 
 export type ExpeditionAction =
-  | { readonly action: 'expedition-open' | 'expedition-stop' | 'expedition-ship' | 'expedition-leave' | 'expedition-enter' | 'expedition-follow' }
+  | { readonly action: 'expedition-open' | 'expedition-stop' | 'expedition-ship' | 'expedition-leave' | 'expedition-enter' | 'expedition-follow' | 'expedition-leave-convoy' }
   | { readonly action: 'expedition-speed'; readonly speed: number }
   | { readonly action: 'expedition-mode'; readonly mode: ExpeditionMode }
   | { readonly action: 'expedition-go' | 'expedition-pin'; readonly x: number; readonly y: number; readonly region?: number; readonly index?: number }
@@ -299,7 +303,11 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   sides.className = 'dagger-expedition-sides';
   sides.setAttribute('role', 'group');
   sides.setAttribute('aria-label', 'Take a side');
-  exits.append(menuButton, leave, sides, enter);
+  // A hired guard leaves the convoy at one of its stops, forfeiting the pay.
+  const leaveConvoy = button('Leave the convoy');
+  leaveConvoy.className = 'dagger-expedition-leave-convoy';
+  leaveConvoy.addEventListener('click', () => claim({ action: 'expedition-leave-convoy' }));
+  exits.append(menuButton, leave, sides, leaveConvoy, enter);
   bottom.append(modes, vitals, status, exits);
 
   // A waiting encounter must be entered: a centred panel over the dimmed map names it, its Enter focused. The bottom
@@ -523,7 +531,8 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
       : state.mode === 'halt' ? ' · halted' : state.mode === 'camp' ? '' : ` · heading for ${state.destination.name ?? 'the marked spot'}`
         + (state.remaining ? `, about ${state.remaining} away` : '');
     const camp = state.mode === 'camp' ? state.lodging !== null ? ` · lodging, ${state.lodging} gold a night` : ' · in camp' : '';
-    return `${where}${aboard}${going}${camp}.`;
+    const ride = state.convoyRide ? ` · riding with the ${state.convoyRide}` : '';
+    return `${where}${aboard}${going}${camp}${ride}.`;
   };
 
   const render = (state: ExpeditionProjection): void => {
@@ -649,6 +658,7 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
       }
     });
     sides.hidden = (state.convoySides ?? []).length === 0;
+    leaveConvoy.hidden = !state.canLeaveConvoy;
     encounterPanel.hidden = state.encounter === null;
     encounterTitle.textContent = state.encounter?.title ?? '';
     encounterLine.textContent = state.encounter?.line ?? '';

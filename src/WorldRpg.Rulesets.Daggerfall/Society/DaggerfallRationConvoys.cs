@@ -12,7 +12,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <paramref name="Agreement"/> to <paramref name="Receiver"/>, sent the Sunday of turn <paramref name="Turn"/> from
 /// <paramref name="Origin"/> on band <paramref name="BandId"/> with its drover and guards, <paramref name="Riders"/>. It
 /// goes by <paramref name="Stops"/>, the towns of the regions the board lets its grain pass through, the last its
-/// destination, and is bound for stop <paramref name="Leg"/>.
+/// destination, and is bound for stop <paramref name="Leg"/>, never entering <paramref name="AvoidRegions"/>, the regions
+/// the board would not let its grain pass when it was sent.
 /// </summary>
 internal sealed record DaggerfallRationConvoySave(
     [property: JsonRequired] string BandId,
@@ -28,7 +29,8 @@ internal sealed record DaggerfallRationConvoySave(
     long[]? Raiders = null,
     bool StruckConvoy = false,
     bool StruckRaiders = false,
-    bool Raided = false)
+    bool Raided = false,
+    int[]? AvoidRegions = null)
 {
     /// <summary>The convoy's guards, who fight; the first aboard is its drover, who does not.</summary>
     [JsonIgnore]
@@ -82,7 +84,8 @@ internal interface IDaggerfallConvoyFight
 /// grain pass through (<see cref="Trade.RationRoute"/>), one leg at a time. The convoy travels as any persistent band
 /// does, live near the player and on the road beyond (#11178). What becomes of it is the board's next Sunday's news: an arrival clears the
 /// term's losses (<see cref="RationArrived"/>), and a loss is a missed ration (<see cref="RationLost"/>), naming the seat
-/// whose soldiers took it when they were a seat's.
+/// whose soldiers took it when they were a seat's. A convoy musters in its town until <paramref name="musterUntil"/> says,
+/// when its giver's factor hires guards (#11182).
 /// </summary>
 internal sealed class DaggerfallRationConvoys(
     DaggerfallDefinitions definitions,
@@ -90,7 +93,8 @@ internal sealed class DaggerfallRationConvoys(
     Func<ulong> worldSocialSeed,
     Func<DaggerfallNpcAppearance, int, string>? generateName,
     Func<DaggerfallOverlandPartyCoordinator?> overlandParties,
-    Func<string, string?> bannerOfSeat)
+    Func<string, string?> bannerOfSeat,
+    Func<long?>? musterUntil = null)
 {
     internal const string BandPrefix = "convoy:";
     private const string SlotPrefix = "population/convoy/";
@@ -100,6 +104,8 @@ internal sealed class DaggerfallRationConvoys(
     private Action<WorldNudge>? _report;
     private Action<DaggerfallRationConvoySave, string?, long>? _lost;
     private IDaggerfallConvoyFight? _fight;
+    private DaggerfallConvoyGuardJob? _guard;
+    private Func<string, bool> _riding = _ => false;
 
     internal IReadOnlyCollection<DaggerfallRationConvoySave> All => _convoys.Values;
 
@@ -113,6 +119,16 @@ internal sealed class DaggerfallRationConvoys(
 
     /// <summary>Binds what a convoy fight asks of the world (#11181).</summary>
     internal void BindFight(IDaggerfallConvoyFight fight) => _fight = fight;
+
+    /// <summary>
+    /// Binds the player's convoy-guard job (#11182) and what says whether the party rides with a convoy's band, which a
+    /// guard must to be paid when it arrives.
+    /// </summary>
+    internal void BindGuard(DaggerfallConvoyGuardJob guard, Func<string, bool> riding)
+    {
+        _guard = guard;
+        _riding = riding;
+    }
 
     /// <summary>
     /// The sides the player may take with the convoy on band <paramref name="bandId"/>, come upon on the map, beyond
@@ -146,7 +162,8 @@ internal sealed class DaggerfallRationConvoys(
     internal void Staged(string bandId, IReadOnlyList<long> primary, IReadOnlyList<long> rivals)
     {
         if (!_convoys.TryGetValue(bandId, out DaggerfallRationConvoySave? convoy) || _fight is null) return;
-        DaggerfallConvoySide side = convoy.Side ?? DaggerfallConvoySide.Approach;
+        // A guard hired to it who enters without taking a side stands with it (#11182).
+        DaggerfallConvoySide side = convoy.Side ?? (_guard?.Guards(bandId) == true ? DaggerfallConvoySide.Defend : DaggerfallConvoySide.Approach);
         _convoys[bandId] = convoy = convoy with { Side = side, Raiders = [.. (convoy.Raiders ?? []).Union(rivals)] };
         long[] guards = [.. convoy.Guards.Where(primary.Contains)];
         foreach (long guard in guards) _fight.Arm(guard);
@@ -190,6 +207,35 @@ internal sealed class DaggerfallRationConvoys(
     {
         DaggerfallRationConvoySave raided = _convoys[convoy.BandId] = _convoys[convoy.BandId] with { Raided = true };
         _fight?.Raided(raided);
+        // Raiding the convoy you were hired to guard is desertion besides (#11182).
+        _ = _guard?.Deserted(convoy.BandId);
+    }
+
+    /// <summary>
+    /// The guarded convoy on band <paramref name="bandId"/>, met in an ambush and left, takes to the map again from
+    /// <paramref name="at"/> with its guard (#11182) when all its people lived: bound for the stop it was, the ambush
+    /// driven off if the guard struck its raiders. One whose people any died of is lost to its guard, who is paid nothing;
+    /// its board settles it at Sunday as any convoy met and left. Returns whether it rode on.
+    /// </summary>
+    internal bool ResumeGuarded(string bandId, DaggerfallTravelMapPixel at, Func<long, bool> riderDied)
+    {
+        if (_guard?.Guards(bandId) != true || !_convoys.TryGetValue(bandId, out DaggerfallRationConvoySave? convoy)) return false;
+        if (convoy.Riders.Any(riderDied) || convoy.Raided)
+        {
+            _guard.Lost(bandId);
+            return false;
+        }
+        if (overlandParties() is not { } coordinator
+            || definitions.Locations.Records.FirstOrDefault(site => site.Id == convoy.Stops[convoy.Leg].Require()) is not { } next
+            || !definitions.BoardSeats.TryGetBySeatId(convoy.Giver, out DaggerfallBoardSeatBinding? giver) || giver is null)
+            return false;
+        int[] avoid = convoy.AvoidRegions ?? [];
+        if (coordinator.Policy.OverlandRoute(at, new(next.MapPixelX, next.MapPixelY), avoid) is null) return false;
+        Ride(coordinator, bandId, $"{giver.SeatName} Grain Convoy", giver.SeatName, bannerOfSeat(convoy.Giver), convoy.Riders,
+            at.X + 0.5, at.Y + 0.5, null, next, avoid);
+        if (convoy.StruckRaiders) _guard.DroveOff(bandId);
+        _convoys[bandId] = convoy with { Side = null, Raiders = null, StruckRaiders = false };
+        return true;
     }
 
     /// <summary>
@@ -218,30 +264,33 @@ internal sealed class DaggerfallRationConvoys(
             .. Enumerable.Range(1, Guards).Select(guard => DaggerfallRoadEnvoys.Stage(definitions, actorLedger, worldSocialSeed(), generateName,
                 origin, string.Create(CultureInfo.InvariantCulture, $"{slot}/guard-{guard}"), "convoy-guard", "convoy guard", "Convoy Guard", giverFaction)),
         ];
-        Ride(coordinator, bandId, $"{giverName} Grain Convoy", giverName, bannerOfSeat(giver), riders, origin, route[1], avoidRegions);
+        Ride(coordinator, bandId, $"{giverName} Grain Convoy", giverName, bannerOfSeat(giver), riders, origin.MapPixelX + 0.5, origin.MapPixelY + 0.5,
+            origin.Id, route[1], avoidRegions, musterUntil?.Invoke());
         DaggerfallRationConvoySave convoy = new DaggerfallRationConvoySave(bandId, agreement, giver, receiver,
             new(origin.Id.Region, origin.Id.Index), [.. route.Skip(1).Select(town => new DaggerfallSiteIdSave(town.Id.Region, town.Id.Index))],
-            0, turn, riders).Validate();
+            0, turn, riders, AvoidRegions: avoidRegions.Count > 0 ? [.. avoidRegions] : null).Validate();
         _convoys[bandId] = convoy;
         return convoy;
     }
 
     private static void Ride(DaggerfallOverlandPartyCoordinator coordinator, string bandId, string name, string giverName, string? banner,
-        long[] riders, DaggerfallSiteRecord from, DaggerfallSiteRecord to, IReadOnlyList<int> avoidRegions) =>
+        long[] riders, double startX, double startY, DaggerfallSiteId? from, DaggerfallSiteRecord to, IReadOnlyList<int> avoidRegions,
+        long? heldUntilSecond = null) =>
         _ = coordinator.DispatchOverlandBand(
             bandId: bandId,
             name: name,
             kind: DaggerfallBandKind.Convoy,
             memberIds: riders,
-            startX: from.MapPixelX + 0.5,
-            startY: from.MapPixelY + 0.5,
+            startX: startX,
+            startY: startY,
             speedPixelsPerHour: DaggerfallOverlandTraffic.CaravanSpeedPixelsPerHour,
             destination: new DaggerfallExpeditionMark(new(to.MapPixelX, to.MapPixelY), to.Id),
             destinationProfile: DaggerfallWorldProfileIds.Exterior(to.Id),
             faction: giverName,
-            originSite: from.Id,
+            originSite: from,
             banner: banner,
-            avoidRegions: avoidRegions);
+            avoidRegions: avoidRegions,
+            heldUntilSecond: heldUntilSecond);
 
     /// <summary>
     /// A convoy's band reached the stop it was bound for: short of its destination it sets out at once for the next stop,
@@ -254,7 +303,8 @@ internal sealed class DaggerfallRationConvoys(
             && definitions.Locations.Records.FirstOrDefault(site => site.Id == convoy.Stops[convoy.Leg].Require()) is { } here
             && definitions.Locations.Records.FirstOrDefault(site => site.Id == convoy.Stops[convoy.Leg + 1].Require()) is { } next)
         {
-            Ride(coordinator, band.BandId, band.Name, band.Faction ?? convoy.Giver, band.Banner, convoy.Riders, here, next, band.AvoidRegions);
+            Ride(coordinator, band.BandId, band.Name, band.Faction ?? convoy.Giver, band.Banner, convoy.Riders, here.MapPixelX + 0.5, here.MapPixelY + 0.5,
+                here.Id, next, convoy.AvoidRegions ?? []);
             _convoys[band.BandId] = convoy with { Leg = convoy.Leg + 1 };
             return true;
         }
@@ -268,7 +318,10 @@ internal sealed class DaggerfallRationConvoys(
     internal bool Arrived(string bandId)
     {
         if (!_convoys.Remove(bandId, out DaggerfallRationConvoySave? convoy)) return false;
-        if (convoy is { Side: DaggerfallConvoySide.Defend or DaggerfallConvoySide.Approach, StruckRaiders: true, Raided: false })
+        // A guard who rode in with it is paid (#11182) and, like a defender who saw it through, earns the escort's standing.
+        bool rodeIn = _riding(bandId);
+        bool escorted = _guard?.Arrived(bandId, rodeIn) is not null && rodeIn;
+        if (escorted || convoy is { Side: DaggerfallConvoySide.Defend or DaggerfallConvoySide.Approach, StruckRaiders: true, Raided: false })
             _fight?.Defended(convoy);
         DaggerfallRoadEnvoys.Release(actorLedger, bandId, SlotPrefix, convoy.Riders);
         _report?.Invoke(new RationArrived(convoy.Agreement, convoy.Giver));
@@ -283,6 +336,7 @@ internal sealed class DaggerfallRationConvoys(
     internal bool OnBandLost(string bandId, DaggerfallWorldConditionToken? raidedUnder, long second)
     {
         if (!_convoys.Remove(bandId, out DaggerfallRationConvoySave? convoy)) return false;
+        _guard?.Lost(bandId);
         DaggerfallRoadEnvoys.Release(actorLedger, bandId, SlotPrefix, convoy.Riders);
         string? raider = RaiderOf(raidedUnder, convoy.Giver);
         _report?.Invoke(new RationLost(convoy.Agreement, convoy.Giver, raider));

@@ -25,4 +25,7 @@ public interface IDeveloperBoardCommands : IDebugCommandModule
 
     [DebugCommand("board.send-convoy", Description = "Developer: send this week's ration convoys now, as Sunday sends them, for every grain agreement in force; with none in force, first strike coin for grain between the first two seats that can trade it. Lists each convoy's band, giver and towns as JSON.")]
     DebugCommandResult SendConvoy();
+
+    [DebugCommand("board.ambush-convoy", Description = "Developer: spring the road's ambush now on the convoy the party rides with as its hired guard on the open travel map, as a raid rolled on its road would: its raiders, drawn from the tables where it stands, clash with it beside the party.")]
+    DebugCommandResult AmbushConvoy();
 }

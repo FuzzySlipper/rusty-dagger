@@ -40,6 +40,12 @@ internal sealed record DaggerfallExpeditionView(
 {
     /// <summary>The sides the player may take with a convoy come upon, beyond approaching and passing it by (#11181): defend, join-raiders, raid.</summary>
     internal IReadOnlyList<string> ConvoySides { get; init; } = [];
+
+    /// <summary>The convoy the party rides with as its hired guard (#11182), by name, or null.</summary>
+    internal string? ConvoyRide { get; init; }
+
+    /// <summary>Whether the party may leave the convoy it guards here, at one of its stops, forfeiting the pay (#11182).</summary>
+    internal bool CanLeaveConvoy { get; init; }
 }
 
 /// <summary>
@@ -76,7 +82,7 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
     Action<DaggerfallTransportActionResult> applyTransportChange, PresentationState presentation,
     DaggerfallOverlandMap overland, Func<DaggerfallTravelMapPixel> playerPixel,
     Func<string, (string? Faction, string? Detail)>? describePersistentBand = null, DaggerfallRealmsMap? realms = null,
-    DaggerfallRationConvoys? convoys = null)
+    DaggerfallRationConvoys? convoys = null, DaggerfallConvoyGuardJob? convoyGuard = null)
 {
     private DaggerfallTravelMap? _map;
     private bool _worldMapOpen;
@@ -123,6 +129,17 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
                         _ => DaggerfallConvoySide.Raid,
                     }) == true)
                     enterExpedition();
+                break;
+            // A hired guard may leave the convoy at any of its stops, forfeiting the pay (#11182).
+            case DaggerfallUiActionKind.ExpeditionLeaveConvoy:
+                if (convoyGuard?.Hire is null || expedition.RidingWith is null || !expedition.RidingAtStop)
+                {
+                    presentation.SetOutcome("You can leave the convoy only at one of its stops.");
+                    break;
+                }
+                _ = convoyGuard.Quit();
+                expedition.StopRiding();
+                presentation.SetOutcome("You leave the convoy, and its pay with it.");
                 break;
             case DaggerfallUiActionKind.ExpeditionView:
                 IReadOnlyList<double> move = action.View!;
@@ -217,6 +234,9 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
                     _ => "raid",
                 })]
                 : [],
+            ConvoyRide = expedition.RidingWith is { } ridden
+                ? expedition.PersistentBands.FirstOrDefault(band => StringComparer.Ordinal.Equals(band.BandId, ridden))?.Name : null,
+            CanLeaveConvoy = convoyGuard?.Hire is not null && expedition.RidingWith is not null && expedition.RidingAtStop,
         };
     }
 

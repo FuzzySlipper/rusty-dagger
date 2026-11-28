@@ -33,7 +33,7 @@ internal enum DaggerfallUiActionKind
     TransportSelect, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
     ExpeditionOpen, ExpeditionPlaces, ExpeditionSpeed, ExpeditionMode, ExpeditionGo, ExpeditionStop, ExpeditionPin, ExpeditionFind,
-    ExpeditionShip, ExpeditionLeave, ExpeditionEnter, ExpeditionSide, ExpeditionView, ExpeditionFollow, ExpeditionLook, ExpeditionGoAt, ExpeditionPinAt,
+    ExpeditionShip, ExpeditionLeave, ExpeditionEnter, ExpeditionSide, ExpeditionLeaveConvoy, ExpeditionView, ExpeditionFollow, ExpeditionLook, ExpeditionGoAt, ExpeditionPinAt,
     WorldMap, WorldMapFind, WorldMapPin, WorldMapTravel, AtlasTiles, MapOpen, MapBuilding,
     Rest, LodgingQuote, LodgingBook,
     WagonPut, WagonTake,
@@ -260,6 +260,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.ExpeditionLeave, "expedition-leave", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ExpeditionEnter, "expedition-enter", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ExpeditionSide, "expedition-side", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.ExpeditionLeaveConvoy, "expedition-leave-convoy", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ExpeditionView, "expedition-view", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ExpeditionFollow, "expedition-follow", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ExpeditionLook, "expedition-look", DaggerfallUiPhases.Interaction),
@@ -613,7 +614,8 @@ internal static class DaggerfallUiAction
                         ? new(action, X: x, Y: y, Region: region, Index: index) : null;
                 case DaggerfallUiActionKind.ExpeditionOpen or DaggerfallUiActionKind.ExpeditionPlaces or DaggerfallUiActionKind.ExpeditionStop
                     or DaggerfallUiActionKind.ExpeditionFollow
-                    or DaggerfallUiActionKind.ExpeditionShip or DaggerfallUiActionKind.ExpeditionLeave or DaggerfallUiActionKind.ExpeditionEnter:
+                    or DaggerfallUiActionKind.ExpeditionShip or DaggerfallUiActionKind.ExpeditionLeave or DaggerfallUiActionKind.ExpeditionEnter
+                    or DaggerfallUiActionKind.ExpeditionLeaveConvoy:
                     return fields.SetEquals(["action"]) ? new(action) : null;
                 case DaggerfallUiActionKind.ExpeditionSide:
                     return fields.SetEquals(["action", "mode"]) && mode is "defend" or "join-raiders" or "raid" ? new(action, Mode: mode) : null;

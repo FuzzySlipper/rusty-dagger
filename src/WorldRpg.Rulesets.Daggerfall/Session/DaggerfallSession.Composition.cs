@@ -832,9 +832,13 @@ internal sealed partial class DaggerfallSession
                 CourierDispatches.Restore(saved.CourierDispatches);
             RationConvoys = new DaggerfallRationConvoys(definitions, State.ActorLedger, () => _worldSocialSeed,
                 new DaggerfallNames(definitions, _random).NpcName, () => OverlandParties,
-                seat => RealmArms.OfSeat(seat) is { } arms ? DaggerfallHeraldry.Hex(definitions.Heraldry.Colour(arms.Livery)) : null);
+                seat => RealmArms.OfSeat(seat) is { } arms ? DaggerfallHeraldry.Hex(definitions.Heraldry.Colour(arms.Livery)) : null,
+                () => _time.Calendar.ToAbsoluteSeconds() + _tuning.Politics.ConvoyMusterHours * 3600L);
             RationConvoys.Restore(saved?.RationConvoys);
             RationConvoys.BindLossNews(RecordConvoyLost);
+            ConvoyGuard = new DaggerfallConvoyGuardJob(_tuning.Politics, () => _time.Calendar.DayNumber, PayConvoyGuard, ChangeSeatStanding);
+            ConvoyGuard.Restore(saved?.ConvoyGuard);
+            RationConvoys.BindGuard(ConvoyGuard, bandId => Expedition.Open && StringComparer.Ordinal.Equals(Expedition.RidingWith, bandId));
             NoticeBoard = new DaggerfallNoticeBoard(
                 definitions, WorldConditions, OfficeHolders, OfficeLedger, State.Crime, State.Social,
                 () => checked((int)_time.Calendar.DayNumber), CurrentTextContext, () => State.Character.Identity,
@@ -1130,6 +1134,7 @@ internal sealed partial class DaggerfallSession
                 OverlandParties.RestorePendingTransientClashes(pendingClashes);
             OverlandParties.SidesStaged += RationConvoys.Staged;                                     // Society: a met convoy's sides (#11181)
             RationConvoys.BindFight(this);
+            Expedition.BindEscort(() => ConvoyGuard.Hire?.BandId);                                   // Travel: the party rides with the convoy it guards (#11182)
             OverlandTraffic = new DaggerfallOverlandTraffic(
                 definitions, State.ActorLedger, actors, State.Npcs, Expedition, OverlandParties,
                 questNames.NpcName, () => _worldSocialSeed, () => _site.ActiveSite?.Id);
@@ -1447,6 +1452,7 @@ internal sealed partial class DaggerfallSession
             _persistence.NoticeBounties = NoticeBounties.Capture;
             _persistence.PoliticalBoard = () => PoliticalBoard?.Capture();
             _persistence.RationConvoys = RationConvoys.Capture;
+            _persistence.ConvoyGuard = ConvoyGuard.Capture;
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;
@@ -1744,7 +1750,7 @@ internal sealed partial class DaggerfallSession
                 definitions.WorldNames, _atlasTiles, () => _classicArt, State.Transport, State.Wagon, State.Inventory, _inventoryUi,
                 _hud.RequestTravelPlaces, TransportAccess, OpenExpedition, EnterExpedition, BoardPropertyShip, LeavePropertyShip,
                 ApplyTransportChange, Presentation, _overland, MapPosition.Position, DescribePersistentExpeditionBand,
-                new DaggerfallRealmsMap(definitions, RealmArms), RationConvoys);
+                new DaggerfallRealmsMap(definitions, RealmArms), RationConvoys, ConvoyGuard);
             DaggerfallServiceCounter counter = new(() => _dialogue, CurrentInteriorBuilding, _site, () => _sites.ActiveProfile, _activationPresentation);
             DaggerfallMakerPanels makers = new(_itemMaker, _potionMaker, definitions, counter, Presentation);
             SummoningPanel = new DaggerfallSummoningPanel(Summoning, State.Quests, Cinematics, composition.VideosEnabled, counter,
@@ -1869,7 +1875,7 @@ internal sealed partial class DaggerfallSession
                     activeSiteProfile: () => _sites.Projection.Inputs,
                     activeCityGates: () => _sites.Projection.Inputs.CityGates,
                     handleHostilitySignal: HandleHostilitySignalCommand),
-                new DaggerfallBoardInspection(() => PoliticalBoard, () => _time.Calendar),
+                new DaggerfallBoardInspection(() => PoliticalBoard, () => _time.Calendar, () => Expedition),
             ];                                                                                     // Developer
             _roster.BindScheduleStaticSuppression(SuppressedStaticSlotsFor);
             if (restore is not null)
@@ -1989,6 +1995,8 @@ internal sealed partial class DaggerfallSession
             denounceOfficeHolder: (speaker, targetId, site) => DaggerfallExileDialogue.EvaluateAndDenounce(
                 speaker, targetId, site, OfficeLedger, OfficeHolders, WorldConditions, State.Social, State.Crime, Law, _definitions,
                 checked((int)_time.Calendar.DayNumber), State.Npcs, State.Actors, State.ActorLedger),
+            convoyGuardOffers: ConvoyGuardOffers,
+            takeConvoyGuard: TakeConvoyGuard,
             isVouchUsable: vouch => Introductions.IsVouchUsable(vouch),
             noticeBounties: NoticeBounties,
             officeAllegiance: OfficeAllegiance,

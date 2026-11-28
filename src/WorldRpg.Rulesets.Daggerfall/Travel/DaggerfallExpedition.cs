@@ -400,6 +400,10 @@ internal sealed class DaggerfallExpedition
     private DaggerfallExpeditionBand? _bandAhead;
     private DaggerfallPersistentOverlandBand? _persistentBandAhead;
     private string? _pendingPersistentBandId;
+    private Func<string?>? _escort;
+    private string? _ridingWith;
+    private string? _ambushLine;
+    private DaggerfallTravelMapPixel? _haltedAt;
     private DaggerfallTravelDestination[] _found = [];
 
     /// <param name="tables">The classic encounter tables bands are staged from; none stages no band.</param>
@@ -440,6 +444,22 @@ internal sealed class DaggerfallExpedition
     internal string? EncounterFoe => _encounterWaiting ? _encounterFoe : null;
 
     internal DaggerfallTravelMapPixel Party => _party;
+
+    /// <summary>
+    /// Binds the band the player is hired to guard, if any (#11182): once the party is with it, they ride together, the map
+    /// moving the party along its route at its pace while time passes.
+    /// </summary>
+    internal void BindEscort(Func<string?> escort) => _escort = escort;
+
+    /// <summary>The band the party rode with through the last stretch (#11182), or null.</summary>
+    internal string? RidingWith => _ridingWith;
+
+    /// <summary>Whether the band the party rides with stands at a stop, its town, not yet set out again: the party may leave it there.</summary>
+    internal bool RidingAtStop => RiddenBand() is { RouteStep: 0, RoadSegment: 0 };
+
+    /// <summary>The party leaves the band it rode with, staying where it stands.</summary>
+    internal void StopRiding() => _ridingWith = null;
+
     internal DaggerfallExpeditionMode Mode => _mode;
     internal int Speed => _speed;
     internal DaggerfallExpeditionMark? Destination => _leg?.Destination;
@@ -474,6 +494,8 @@ internal sealed class DaggerfallExpedition
         _speed = 0;
         _owed = 0;
         if (_open && _held is null) { _message = null; return; }
+        _ridingWith = null;
+        _haltedAt = null;
         _held = held;
         _message = held;
         _open = true;
@@ -577,6 +599,11 @@ internal sealed class DaggerfallExpedition
             return;
         }
         if (Refused() is { } refusal) { _message = refusal; return; }
+        if (RiddenBand() is { } ridden)
+        {
+            _message = $"You ride with {ridden.Name}. Leave it at a stop to go your own way.";
+            return;
+        }
         if (pixel == _party)
         {
             _leg = null;
@@ -807,7 +834,7 @@ internal sealed class DaggerfallExpedition
             if (BandsStop(applied, after)) break;
             if (Arrived()) break;
             if (after.MinuteNumber / DaggerfallCalendar.MinutesPerHour != before.MinuteNumber / DaggerfallCalendar.MinutesPerHour
-                && _ship == DaggerfallExpeditionShip.None && !_policy.IsOcean(_party)
+                && _ship == DaggerfallExpeditionShip.None && !_policy.IsOcean(_party) && _ridingWith is null
                 && _world.EncounterArrives(_party, LocationHere is not null, after.MinuteNumber))
             {
                 _encounterWaiting = true;
@@ -1150,7 +1177,9 @@ internal sealed class DaggerfallExpedition
         long now = after.ToAbsoluteSeconds();
         ExpireActiveClashes(now);
         TakeToRoadOrMap(Position);
+        string? riddenBefore = _ridingWith;
         StepRoad(now - seconds, now, Position);
+        if (RideAlong(riddenBefore)) return true;
 
         Dictionary<string, (double X, double Y)> beforePositions = new(_persistentBands.Count, StringComparer.Ordinal);
         foreach (DaggerfallPersistentOverlandBand persistent in _persistentBands)
@@ -1168,7 +1197,8 @@ internal sealed class DaggerfallExpedition
         _ = ResolveBandCollisions(now, Position, mapOpen: true, beforePositions);
 
         if (EvaluatePersistentPlayerEvents(arrivedBandIds)) return true;
-        if (atSea) return false;
+        // Riding with a convoy it guards, the party goes as the convoy does: only the road's ambush meets it (#11182).
+        if (atSea || _ridingWith is not null) return false;
 
         double partySight = PartySight;
         DaggerfallBandEvent? found = _bands.EvaluatePlayerEvents(Position, SightConditions());
@@ -1425,6 +1455,92 @@ internal sealed class DaggerfallExpedition
     private static bool IsRaidableTraveller(DaggerfallPersistentOverlandBand band) =>
         !band.Hostile && band.Kind is DaggerfallBandKind.Caravan or DaggerfallBandKind.Travellers or DaggerfallBandKind.Courier or DaggerfallBandKind.Convoy;
 
+    /// <summary>The band the player is hired to guard while the party rides with it, or null.</summary>
+    private DaggerfallPersistentOverlandBand? RiddenBand() =>
+        _ridingWith is { } id && _escort?.Invoke() == id ? _persistentBands.FirstOrDefault(band => StringComparer.Ordinal.Equals(band.BandId, id)) : null;
+
+    /// <summary>
+    /// Keeps the party with the band the player is hired to guard (#11182): once the party stands with it, they ride
+    /// together, the party where the band is after each stretch and never coming upon it. A band that reached a stop it
+    /// set out again from halts the map there, where the party may leave it; an ambush on it halts the map at the fight.
+    /// Returns whether the map halted.
+    /// </summary>
+    private bool RideAlong(string? riddenBefore)
+    {
+        if (_ambushLine is { } ambush)
+        {
+            _ambushLine = null;
+            Pause(ambush);
+            return true;
+        }
+        string? id = _escort?.Invoke();
+        DaggerfallPersistentOverlandBand? band = id is null ? null : _persistentBands.FirstOrDefault(band => StringComparer.Ordinal.Equals(band.BandId, id));
+        if (band is null || band.ActiveClash is not null
+            || (_ridingWith != id && !WithParty(band)))
+        {
+            _ridingWith = null;
+            _haltedAt = null;
+            // The band rode on to its end (its destination, or its loss on the road) with the party: the map halts there.
+            if (riddenBefore is not null && riddenBefore == id && band is null)
+            {
+                Pause(null);
+                return true;
+            }
+            return false;
+        }
+        _ridingWith = id;
+        band.Passed = true;
+        if (_persistentBandAhead == band) _persistentBandAhead = null;
+        _leg = null;
+        _route = [];
+        _party = new(Math.Clamp((int)Math.Floor(band.X), 0, DaggerfallTravelMapPixel.Width - 1),
+            Math.Clamp((int)Math.Floor(band.Y), 0, DaggerfallTravelMapPixel.Height - 1));
+        if (band.RouteStep == 0 && band.RoadSegment == 0 && LocationHere is { } stop && band.RouteOrigin is { } origin && _haltedAt != origin)
+        {
+            _haltedAt = origin;
+            Pause($"{band.Name} halts at {stop.Name}. Ride on with it, or leave the convoy here.");
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Springs the road's ambush now on the band the party rides with, for a developer (#11182). Null when it fell, else
+    /// why not.
+    /// </summary>
+    internal string? AmbushRidden()
+    {
+        if (!_open) return "Open the travel map first.";
+        if (RiddenBand() is not { } band) return "The party rides with no convoy.";
+        if (!Ambush(band, _world.Calendar.ToAbsoluteSeconds())) return "The tables publish no foe where the convoy stands.";
+        _ = RideAlong(_ridingWith);
+        return null;
+    }
+
+    /// <summary>Whether <paramref name="band"/> stands with the party: on its pixel, or within meeting distance.</summary>
+    private bool WithParty(DaggerfallPersistentOverlandBand band) =>
+        ((int)Math.Floor(band.X), (int)Math.Floor(band.Y)) == (_party.X, _party.Y)
+        || band.Distance(Position.X, Position.Y) <= _bands.Tuning.MeetDistance;
+
+    /// <summary>
+    /// An ambush falls on the band the party rides with at absolute second <paramref name="at"/> (#11182): its raiders,
+    /// drawn from the tables where it stands, clash with it beside the party, who comes upon the fight. False where the
+    /// tables publish no foe there, and the raid takes the band as it would any other.
+    /// </summary>
+    private bool Ambush(DaggerfallPersistentOverlandBand band, long at)
+    {
+        DaggerfallTravelMapPixel pixel = new((int)Math.Floor(band.X), (int)Math.Floor(band.Y));
+        if (_bands.AmbushFoe($"ambush:{band.BandId}:{band.RouteOrigin?.X}:{band.RouteOrigin?.Y}:{band.RoadSegment}", at, pixel,
+                _world.PlayerLevel, _world.Roll) is not { } foe)
+            return false;
+        band.OnRoad = false;
+        band.Passed = false;
+        band.ActiveClash = new DaggerfallPersistentBandClashSave(foe.Name, at + ClashHoldSeconds, RivalBandId: null, RivalMobileId: foe.MobileId, RivalSize: foe.Size);
+        _persistentBandAhead = band;
+        _ambushLine = $"{foe.Name} fall upon {band.Name}! Enter to fight beside its guards, or go on to pass it by.";
+        return true;
+    }
+
     /// <summary>
     /// Puts each band where it belongs for the party at <paramref name="party"/>: a band on the road comes onto the map,
     /// where it stands, within the road tuning's live distance; a live band free to go goes back on the road beyond its road
@@ -1433,9 +1549,20 @@ internal sealed class DaggerfallExpedition
     private void TakeToRoadOrMap((double X, double Y) party)
     {
         DaggerfallRoadTuning road = _tuning.Road;
+        DaggerfallPersistentOverlandBand? ridden = RiddenBand();
         foreach (DaggerfallPersistentOverlandBand band in _persistentBands)
         {
             double distance = band.Distance(party.X, party.Y);
+            if (band == ridden)
+            {
+                // The band the party rides with goes by the road, so it meets what any convoy there meets (#11182).
+                if (!band.OnRoad && band.ActiveClash is null)
+                {
+                    band.RoadSegment = Math.Max(band.RoadSegment, (band.RouteStep + road.SegmentPixels - 1) / road.SegmentPixels);
+                    band.OnRoad = true;
+                }
+                continue;
+            }
             if (band.OnRoad)
             {
                 if (distance <= road.LiveDistance) band.OnRoad = false;
@@ -1477,6 +1604,7 @@ internal sealed class DaggerfallExpedition
                 return meeting;
             });
             if (step == DaggerfallRoadStep.Travelling) continue;
+            if (step == DaggerfallRoadStep.Raided && StringComparer.Ordinal.Equals(band.BandId, _ridingWith) && Ambush(band, at)) continue;
             _persistentBands.Remove(band);
             if (step == DaggerfallRoadStep.Raided)
             {
@@ -1487,7 +1615,9 @@ internal sealed class DaggerfallExpedition
             _world.PersistentBandArrived(band, at);
             arrivals++;
             TakeToRoadOrMap(party);
-            foreach (DaggerfallPersistentOverlandBand sent in _persistentBands.Where(sent => sent.OnRoad && !before.Contains(sent)))
+            // The band the party rides with stays at the stop it reached until the next stretch, so the map halts there.
+            foreach (DaggerfallPersistentOverlandBand sent in _persistentBands.Where(sent => sent.OnRoad && !before.Contains(sent)
+                         && !StringComparer.Ordinal.Equals(sent.BandId, _ridingWith)))
                 going.Enqueue((sent, at));
         }
         return arrivals;

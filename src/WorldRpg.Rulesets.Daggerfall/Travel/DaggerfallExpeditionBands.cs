@@ -629,6 +629,25 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
         return band is null ? (null, "No band can be staged there: open sea, a location, or a foe the tables do not publish.") : (band, null);
     }
 
+    /// <summary>
+    /// The foe of an ambush that falls on a band at <paramref name="pixel"/> at absolute second <paramref name="when"/>
+    /// (#11182): drawn from the wilderness tables there as a band staged there would be, by keyed draws under
+    /// <paramref name="key"/>, a location's pixel included; null where the tables publish none.
+    /// </summary>
+    internal (string Name, int MobileId, int Size)? AmbushFoe(string key, long when, DaggerfallTravelMapPixel pixel, int playerLevel,
+        Func<string, int, int, int> draw)
+    {
+        if (tables.Tables.Count == 0 || !pixel.IsInBounds || policy.IsOcean(pixel)) return null;
+        long timeOfDay = when % DaggerfallCalendar.SecondsPerDay / DaggerfallCalendar.SecondsPerMinute;
+        DaggerfallEncounterRequest request = new(timeOfDay is >= 360 and <= 1080 ? DaggerfallEncounterContext.WildernessDay : DaggerfallEncounterContext.WildernessNight,
+            Math.Max(1, playerLevel), Climate: policy.Climate(pixel));
+        DaggerfallEncounterChoice choice = DaggerfallEncounterPolicy.Pick(tables, request, (roll, minimum, maximum) => draw($"{key}:{roll}", minimum, maximum));
+        if (choice.MobileId is not int mobileId || !mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile) || !mobile.IsPublished)
+            return null;
+        int size = draw($"{key}:size", tuning.Size.Minimum, tuning.Size.Maximum);
+        return (size == 1 ? mobile.DonorName : $"{size} {Plural(mobile.DonorName)}", mobileId, size);
+    }
+
     private DaggerfallExpeditionBand? TryStage(long when, (double X, double Y) party, int playerLevel, Func<string, int, int, int> draw,
         (double Distance, double Bearing)? at, bool? camp, IReadOnlyList<DaggerfallWorldConditionToken>? worldConditions = null)
     {

@@ -1096,6 +1096,7 @@ internal sealed partial class DaggerfallSession
             _ = OverlandParties.ReleaseDepartingTrafficVisitors(_activeProfileKey, dispatchReturnBand: true); // Travel, Actors
         }
         Expedition.Begin(MapPosition.Position(), State.Transport.OnShip, held);                   // Travel
+        if (held is null) ResumeGuardedConvoy();                                                  // Society: a guarded convoy rides on after its ambush (#11182)
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                        // Character, Combat
         _hud.RequestTravelPlaces();                                                               // UiProjection
     }

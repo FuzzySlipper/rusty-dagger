@@ -193,7 +193,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         string? faction = null,
         DaggerfallSiteId? originSite = null,
         string? banner = null,
-        IReadOnlyList<int>? avoidRegions = null)
+        IReadOnlyList<int>? avoidRegions = null,
+        long? heldUntilSecond = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
         ArgumentNullException.ThrowIfNull(memberIds);
@@ -246,7 +247,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             Faction: string.IsNullOrWhiteSpace(faction) ? null : faction.Trim(),
             OriginSite: originSite is { } os ? new DaggerfallSiteIdSave(os.Region, os.Index) : null,
             Banner: banner,
-            AvoidRegions: avoidRegions is { Count: > 0 } ? [.. avoidRegions] : null);
+            AvoidRegions: avoidRegions is { Count: > 0 } ? [.. avoidRegions] : null,
+            HeldUntilSecond: heldUntilSecond);
         return _expedition.RegisterPersistentBand(save);
     }
 

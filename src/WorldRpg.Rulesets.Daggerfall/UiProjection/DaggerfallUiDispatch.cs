@@ -280,6 +280,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case DaggerfallUiActionKind.ExpeditionFind:
             case DaggerfallUiActionKind.ExpeditionShip:
             case DaggerfallUiActionKind.ExpeditionLeave:
+            case DaggerfallUiActionKind.ExpeditionLeaveConvoy:
             case DaggerfallUiActionKind.ExpeditionView:
             case DaggerfallUiActionKind.ExpeditionFollow:
             case DaggerfallUiActionKind.ExpeditionLook:

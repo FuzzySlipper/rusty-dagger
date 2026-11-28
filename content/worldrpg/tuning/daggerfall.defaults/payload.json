@@ -107,7 +107,12 @@
     "carryWordInfluence": 2,
     "undermineInfluence": 1,
     "convoyRaidStanding": 10,
-    "convoyDefenceStanding": 10
+    "convoyDefenceStanding": 10,
+    "convoyMusterHours": 12,
+    "convoyGuardPay": 150,
+    "convoyGuardBonus": 75,
+    "convoyDesertionStanding": 15,
+    "convoyDesertionBarDays": 30
   },
   "normalLight": {
     "distance": 1.4,

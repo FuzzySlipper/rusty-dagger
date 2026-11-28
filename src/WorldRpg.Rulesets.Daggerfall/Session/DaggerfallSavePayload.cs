@@ -108,6 +108,7 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallPoliticalBoardSave? PoliticalBoard { get; init; }
     /// <summary>The board's rations on the road as convoys (#11180); empty when none is.</summary>
     public DaggerfallRationConvoySave[] RationConvoys { get; init; } = [];
+    public DaggerfallConvoyGuardSave? ConvoyGuard { get; init; }
     /// <summary>Every selected RDB door's current state, including a partially completed motion.</summary>
     [JsonRequired]
     public DaggerfallDoorSave[] Doors { get; init; } = [];

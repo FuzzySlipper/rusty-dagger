@@ -2,6 +2,7 @@ using System.Text.Json;
 using Rusty.Engine.Debugging;
 using WorldRpg.Kit;
 using WorldRpg.Politics;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
 using BoardSeat = WorldRpg.Politics.Seat;
 
@@ -12,9 +13,15 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <c>board.turns</c>, <c>board.moves</c>), and <c>board.allegiance</c>, which hands a region to a seat at once for
 /// checking what follows a liege. Reads the board owner on demand and owns no state of its own.
 /// </summary>
-internal sealed class DaggerfallBoardInspection(Func<DaggerfallPoliticalBoard?> politicalBoard, Func<DaggerfallCalendar> calendar)
+internal sealed class DaggerfallBoardInspection(Func<DaggerfallPoliticalBoard?> politicalBoard, Func<DaggerfallCalendar> calendar,
+    Func<DaggerfallExpedition>? expedition = null)
     : IDeveloperBoardCommands
 {
+    public DebugCommandResult AmbushConvoy() =>
+        expedition?.Invoke().AmbushRidden() is { } refusal
+            ? DaggerfallDeveloperReplies.Refused(refusal)
+            : DebugCommandResult.Success("Raiders fall upon the convoy.");
+
     public DebugCommandResult Allegiance(string region, string seat)
     {
         if (politicalBoard() is not { } owner) return DaggerfallDeveloperReplies.Refused("No political board runs in this session.");

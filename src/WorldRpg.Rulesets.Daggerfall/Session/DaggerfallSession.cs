@@ -1063,6 +1063,69 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 State.Social.ChangeFactionReputation(binding.OfficeFactionId, _tuning.Politics.ConvoyDefenceStanding, DaggerfallFactionReputationChange.Propagate);
     }
 
+    /// <summary>The convoy-guard job paid the player (#11182): the gold, and word of it.</summary>
+    private void PayConvoyGuard(int gold)
+    {
+        _ = State.Currency.ReceiveGold((ulong)gold);
+        Presentation.SetOutcome($"The convoy is in. You are paid {gold} gold for guarding it.");
+    }
+
+    /// <summary>Changes the player's standing with board seat <paramref name="seat"/>'s office faction by <paramref name="delta"/>.</summary>
+    private void ChangeSeatStanding(string seat, int delta)
+    {
+        if (_definitions.BoardSeats.TryGetBySeatId(seat, out DaggerfallBoardSeatBinding? binding) && binding is not null)
+            State.Social.ChangeFactionReputation(binding.OfficeFactionId, delta, DaggerfallFactionReputationChange.Propagate);
+    }
+
+    /// <summary>
+    /// The guard jobs <paramref name="npc"/> offers at <paramref name="site"/> (#11182): one for each convoy mustering there,
+    /// in its town and not yet set out, while the player holds no other hire, when <paramref name="npc"/> is of its giver's
+    /// court there: the town's court factor, or a questgiver of the giver's seat (as a political quest's giver is). A court
+    /// that refuses the player work still lists the job, and says no when asked.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallConvoyGuardOffer> ConvoyGuardOffers(DaggerfallNpc npc, DaggerfallSiteRecord? site)
+    {
+        if (site is null || ConvoyGuard.Hire is not null) return [];
+        bool factor = OfficeLedger.ResolveLocalOffices(site).Any(office => office.Kind == DaggerfallOfficeKind.CourtFactor && office.HolderActorId == npc.DurableId);
+        string? seat = npc.Services.Contains("quest") ? PoliticalBoard?.SeatOfFaction(npc.Appearance.FactionId) : null;
+        return [.. RationConvoys.All
+            .Where(convoy => (factor || convoy.Giver == seat) && convoy.Leg == 0 && convoy.Origin.Require() == site.Id
+                && Expedition.PersistentBands.Any(band => StringComparer.Ordinal.Equals(band.BandId, convoy.BandId) && band is { RouteStep: 0, RoadSegment: 0 }))
+            .Select(convoy => new DaggerfallConvoyGuardOffer(convoy.BandId,
+                $"Guard the grain convoy to {PlaceName(convoy.Destination)} ({_tuning.Politics.ConvoyGuardPay} gold on arrival)"))];
+    }
+
+    /// <summary>The player asks <paramref name="npc"/> for the guard job on the convoy on band <paramref name="bandId"/> (#11182).</summary>
+    internal DaggerfallConvoyGuardReply TakeConvoyGuard(DaggerfallNpc npc, string bandId, DaggerfallSiteRecord? site)
+    {
+        const string Question = "Does the grain convoy need another guard?";
+        if (!ConvoyGuardOffers(npc, site).Any(offer => offer.BandId == bandId) || !RationConvoys.TryGet(bandId, out DaggerfallRationConvoySave? convoy) || convoy is null)
+            return new(false, Question, "That convoy has already gone.");
+        if (ConvoyGuard.Refuses(convoy.Giver))
+            return new(false, Question, "The court remembers the last convoy you were paid to guard. There is no work here for you.");
+        if (!ConvoyGuard.Take(convoy))
+            return new(false, Question, "You are sworn to another convoy already.");
+        return new(true, Question, $"Then ride with it to {PlaceName(convoy.Destination)}. It musters by the gate and sets out soon; open your travel map there. "
+            + $"You will have {_tuning.Politics.ConvoyGuardPay} gold when the grain is in, and {_tuning.Politics.ConvoyGuardBonus} more if you see off any raiders.");
+    }
+
+    private string PlaceName(DaggerfallSiteIdSave place) =>
+        _definitions.Locations.Records.FirstOrDefault(site => site.Id == place.Require())?.Name ?? "its town";
+
+    /// <summary>
+    /// The convoy the player guards, met in an ambush and left, rides on from where the party takes the map again, its
+    /// people all living (#11182); otherwise the guard has lost it.
+    /// </summary>
+    private void ResumeGuardedConvoy()
+    {
+        if (ConvoyGuard.Hire is not { } hire
+            || Expedition.PersistentBands.Any(band => StringComparer.Ordinal.Equals(band.BandId, hire.BandId)))
+            return;
+        bool rode = RationConvoys.ResumeGuarded(hire.BandId, Expedition.Party,
+            rider => State.ActorLedger.TryGet(rider, out ActorLedgerEntry? entry) && entry?.Location?.Kind == ActorLocationKind.Dead);
+        Presentation.SetOutcome(rode ? "The convoy forms up again beside you." : "The convoy you were guarding is lost, and its pay with it.");
+    }
+
     void IDaggerfallExpeditionSurroundings.PersistentBandDelayed(DaggerfallPersistentOverlandBand band, long seconds) =>
         CourierDispatches.OnOverlandBandDelayed(band.BandId, seconds / DaggerfallCalendar.SecondsPerMinute);
 
@@ -1662,6 +1725,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>The board's weekly rations on the road as convoys (#11180).</summary>
     internal DaggerfallRationConvoys RationConvoys { get; } = null!;
+    internal DaggerfallConvoyGuardJob ConvoyGuard { get; } = null!;
     internal DaggerfallConditionCounterplay ConditionCounterplay { get; } = null!;
 
     /// <summary>Whom each board region's chief-town offices answer to, and how that takes the player; null without a board.</summary>

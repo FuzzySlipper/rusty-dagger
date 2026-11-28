@@ -123,8 +123,9 @@ public sealed class RationConvoyTests
         (Agreement deal, string giver) = StrikeGrainDeal(session);
         DaggerfallPoliticalBoard board = session.PoliticalBoard!;
 
-        // Sent on the Sunday, the convoy is taken within the hour after.
+        // Sent on the Sunday, the convoy musters in its town (#11182), and is taken the hour after it sets out.
         NextSunday(session);
+        session.AdvanceElapsedTime((DaggerfallTuning.Defaults.Politics.ConvoyMusterHours + 1) * 3600L);
         string first = $"{DaggerfallRationConvoys.BandPrefix}{deal.Id}:{giver}:{board.Board.Turn}";
         Assert.False(session.RationConvoys.TryGet(first, out _));
         Assert.DoesNotContain(session.Expedition.PersistentBands, band => band.BandId == first);

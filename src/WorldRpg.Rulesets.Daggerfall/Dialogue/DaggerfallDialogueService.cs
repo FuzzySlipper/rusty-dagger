@@ -113,6 +113,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallHolderDenounceTarget>>? _denounceTargets;
     private readonly Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? _denounceOfficeHolder;
     private readonly Func<ActorVouchRecord, bool>? _isVouchUsable;
+    private readonly Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallConvoyGuardOffer>>? _convoyGuardOffers;
+    private readonly Func<DaggerfallNpc, string, DaggerfallSiteRecord?, DaggerfallConvoyGuardReply>? _takeConvoyGuard;
     private readonly Func<long, bool>? _wakeSleepingResident;
     private readonly DaggerfallFeudSettlement? _feudSettlement;
     private readonly DaggerfallSocialConsequences? _socialConsequences;
@@ -171,6 +173,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallNpc, DaggerfallOfficeExileSave, DaggerfallExileRestoreResult>? restoreExile = null,
         Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallHolderDenounceTarget>>? denounceTargets = null,
         Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? denounceOfficeHolder = null,
+        Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallConvoyGuardOffer>>? convoyGuardOffers = null,
+        Func<DaggerfallNpc, string, DaggerfallSiteRecord?, DaggerfallConvoyGuardReply>? takeConvoyGuard = null,
         Func<ActorVouchRecord, bool>? isVouchUsable = null,
         DaggerfallNoticeBounties? noticeBounties = null,
         DaggerfallOfficeAllegiance? officeAllegiance = null,
@@ -206,6 +210,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _restoreExile = restoreExile;
         _denounceTargets = denounceTargets;
         _denounceOfficeHolder = denounceOfficeHolder;
+        _convoyGuardOffers = convoyGuardOffers;
+        _takeConvoyGuard = takeConvoyGuard;
         _isVouchUsable = isVouchUsable;
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
@@ -591,6 +597,18 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             if (_noticeBounties is null || string.IsNullOrWhiteSpace(topicTarget))
                 return Reject("No bounty can be claimed here.");
             DaggerfallNoticeBountyClaim result = _noticeBounties.Claim(npc, topicTarget);
+            session.Question = result.Question;
+            session.Reply = result.Message;
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(result.Accepted, result.Message));
+        }
+        if (topic == DaggerfallDialogueTopic.ConvoyGuard)
+        {
+            if (_takeConvoyGuard is null || string.IsNullOrWhiteSpace(topicTarget))
+                return Reject("No convoy hires guards here.");
+            DaggerfallConvoyGuardReply result = _takeConvoyGuard(npc, topicTarget, site);
             session.Question = result.Question;
             session.Reply = result.Message;
             session.Diagnostics.Clear();
@@ -1952,6 +1970,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             string exileName = npc.DisplayName ?? exileOption.DisplayName ?? "them";
             topics.Add(new("restore-exile", $"Help restore {exileName} as {exileOption.Title}", Group: DaggerfallDialogueTopicGroups.Quests));
         }
+        if (_convoyGuardOffers is not null && _takeConvoyGuard is not null)
+            foreach (DaggerfallConvoyGuardOffer offer in _convoyGuardOffers(npc, site))
+                topics.Add(new($"convoy-guard:{offer.BandId}", offer.Label, Group: DaggerfallDialogueTopicGroups.Quests));
         if (_denounceTargets is not null && _denounceOfficeHolder is not null)
         {
             foreach (DaggerfallHolderDenounceTarget target in _denounceTargets(npc, site))
@@ -2139,6 +2160,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             _ => default,
         };
         if (value is "directions" or "news" or "courier-news" or "notice-board" or "referral" or "curry-favour" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party" or "give-healing-draught" or "pay-hazard-bonus" or "party-follow" or "party-wait" or "party-terms" or "restore-exile") return true;
+        if (value is { Length: > 13 } dynamicConvoy && dynamicConvoy.StartsWith("convoy-guard:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.ConvoyGuard;
+            target = dynamicConvoy["convoy-guard:".Length..];
+            return target.Length > 0;
+        }
         if (value is { Length: > 16 } dynamicDenounce && dynamicDenounce.StartsWith("denounce-holder:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.DenounceOfficeHolder;
