@@ -185,6 +185,8 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"direction:site:1:2\"}", true)]
     [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"direction:x\"}", true)]
     [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"direction:\"}", false)]
+    [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"convoy-guard:convoy:deal-1:daggerfall:0\"}", true)]
+    [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"convoy-guard:\"}", false)]
     [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"armor\"}", true)]
     [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"armor\",\"key\":\"102\"}", true)]
     [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"armor\",\"key\":\" \"}", false)]

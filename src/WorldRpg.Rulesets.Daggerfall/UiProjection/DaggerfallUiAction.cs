@@ -893,7 +893,8 @@ internal static class DaggerfallUiAction
         && (value is "directions" or "news" or "work"
             || HasTopicTarget(value, "direction:")
             || HasTopicTarget(value, "quest-info:")
-            || HasTopicTarget(value, "quest-rumor:"));
+            || HasTopicTarget(value, "quest-rumor:")
+            || HasTopicTarget(value, "convoy-guard:"));
 
     private static bool HasTopicTarget(string value, string prefix) =>
         value.StartsWith(prefix, StringComparison.Ordinal) && value.Length > prefix.Length;
