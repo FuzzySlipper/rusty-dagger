@@ -169,7 +169,7 @@ internal static class DaggerfallActorFactory
                 ActorInstanceIdentity placedIdentity = DaggerfallActorInstanceResolver.Resolve(
                     definitions, definition, source.EntityId, explicitGender: source.Gender, regionIndex: inputs.Site?.Region);
                 SetInstanceIdentity(actor.Actor, placedIdentity);
-                actor.Actor.Add(new DaggerfallActorGender(ActorGenderFormat.SpriteKey(placedIdentity.Gender)));
+                SetGender(actor.Actor, definition, ActorGenderFormat.SpriteKey(placedIdentity.Gender));
                 DaggerfallStatsSave baselineStats = DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity);
                 actor.Actor.Add(new ActorOriginComponent(
                     ActorOrigin.FixedPlacement(inputs.ProfileKey, source.EntityId),
@@ -319,13 +319,13 @@ internal static class DaggerfallActorFactory
         out DaggerfallActorDefinition definition, string? explicitArchetypeId = null, string? spawnerId = null)
     {
         ArchetypeProfile profile = ResolveNpcArchetype(definitions, npc, explicitArchetypeId, spawnerId);
-        return CreateCivilianActor(mechanics, actors, inventoryStore, npc, pose, profile, definitions, out definition);
+        return CreateCivilianActor(mechanics, actors, inventoryStore, npc, pose, profile, definitions, out definition, spawnerId);
     }
 
-    /// <summary>Materializes one registry NPC from an explicit <see cref="ArchetypeProfile"/>.</summary>
+    /// <summary>Materializes one registry NPC from an explicit <see cref="ArchetypeProfile"/>, in the look its spawner spec gives it.</summary>
     internal static ActorState CreateCivilianActor(DaggerfallMechanicsState mechanics, ActorsState actors,
         InventoryStore inventoryStore, DaggerfallNpc npc, ActorPose pose, ArchetypeProfile profile,
-        DaggerfallDefinitions? definitions, out DaggerfallActorDefinition definition)
+        DaggerfallDefinitions? definitions, out DaggerfallActorDefinition definition, string? spawnerId = null)
     {
         ArgumentNullException.ThrowIfNull(mechanics);
         ArgumentNullException.ThrowIfNull(actors);
@@ -336,12 +336,26 @@ internal static class DaggerfallActorFactory
         int health = profile.RollDeterministicHealth(npc.DurableId);
         ActorState actor = CreateNonPlayerActor(actors, npc.DurableId, definition,
             mechanics.CreateStats(definition, new DaggerfallVitalValues(health, profile.Fatigue, profile.Magicka)), pose);
-        ApplyNpcComponents(actor, npc, profile, definitions);
+        ApplyNpcComponents(actor, npc, profile, definitions, ResolveNpcLook(definitions, npc, profile, spawnerId));
         RegisterActorInventory(actor, inventoryStore);
         return actor;
     }
 
-    internal static void ApplyNpcComponents(ActorState actor, DaggerfallNpc npc, ArchetypeProfile profile, DaggerfallDefinitions? definitions)
+    /// <summary>
+    /// The look content gives a registry NPC: its spawner spec's (a cast individual's own spec when it names none), which
+    /// is its template's unless the spec states one, else its archetype template's; null when content gives none.
+    /// </summary>
+    internal static DaggerfallActorLook? ResolveNpcLook(DaggerfallDefinitions? definitions, DaggerfallNpc npc, ArchetypeProfile profile, string? spawnerId)
+    {
+        if (definitions is null) return null;
+        string? specId = spawnerId ?? (npc.StableKey.StartsWith("cast:", StringComparison.Ordinal) ? npc.StableKey["cast:".Length..] : null);
+        return specId is not null && definitions.ActorCatalog.Specs.TryGetValue(specId, out DaggerfallActorSpawnerSpec? spec) ? spec.Look
+            : definitions.ActorCatalog.Templates.TryGetValue(profile.Id, out DaggerfallActorTemplateDefinition? template) ? template.Look
+            : null;
+    }
+
+    internal static void ApplyNpcComponents(ActorState actor, DaggerfallNpc npc, ArchetypeProfile profile, DaggerfallDefinitions? definitions,
+        DaggerfallActorLook? look)
     {
         actor.Actor.Get<ActorHarmPolicy>().Set(profile.DefaultHarm);
         actor.Actor.Get<ActorInteractionPolicy>().Set(profile.DefaultInteraction);
@@ -364,25 +378,64 @@ internal static class DaggerfallActorFactory
         else
             actor.Actor.Add(new ActorPersonComponent(liveSnapshot));
 
-        string? castAssetId = ResolveCastVisualAssetId(npc, definitions);
-        ActorVisualSpec visual = npc.Kind == DaggerfallNpcKind.Civilian
-            ? ActorVisualSpec.SplatCivilian(npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord, npc.Appearance.Gender, crowdHint: castAssetId)
-            : ActorVisualSpec.Billboard(
-                npc.Appearance.BillboardArchive,
-                npc.Appearance.BillboardRecord,
-                onBase: true,
-                assetKey: castAssetId is { Length: > 0 } ? $"cast/{castAssetId}" : null,
-                crowdHint: castAssetId);
-        actor.Actor.Get<ActorRenderComponent>().SetVisual(visual);
-
         ActorGender npcGender = ActorGenderFormat.TryParse(npc.Appearance.Gender, out ActorGender parsedGender)
             ? parsedGender
             : (StableHash.NonZeroFnv1a64($"daggerfall.npc-gender:{npc.DurableId}") & 1UL) == 0UL ? ActorGender.Male : ActorGender.Female;
+        actor.Actor.Get<ActorRenderComponent>().SetVisual(NpcVisual(npc, look, ActorGenderFormat.SpriteKey(npcGender), ResolveCastVisualAssetId(npc, definitions)));
+
         string npcRace = !string.IsNullOrWhiteSpace(npc.Appearance.Race) ? npc.Appearance.Race : "breton";
         string npcFaction = primaryFactionId is int fid
             ? fid.ToString(System.Globalization.CultureInfo.InvariantCulture)
             : string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase) ? "city-watch" : "neutral";
         SetInstanceIdentity(actor.Actor, new ActorInstanceIdentity(npc.StableKey, profile.Id, npcGender, npcRace, npcFaction));
+    }
+
+    /// <summary>
+    /// How registry NPC <paramref name="npc"/> of <paramref name="gender"/> (a sprite key) draws in <paramref name="look"/>,
+    /// wearing its own billboard art. A cast individual's own visual asset is the character it draws as where the look names
+    /// none. Without a look, the fallback: a townsperson walks as its splat character, anyone else stands as its billboard.
+    /// </summary>
+    internal static ActorVisualSpec NpcVisual(DaggerfallNpc npc, DaggerfallActorLook? look, string gender, string? castAssetId)
+    {
+        int archive = npc.Appearance.BillboardArchive, record = npc.Appearance.BillboardRecord;
+        ActorVisualSpec billboard = ActorVisualSpec.Billboard(archive, record, onBase: true,
+            assetKey: castAssetId is { Length: > 0 } ? $"cast/{castAssetId}" : null, crowdHint: castAssetId);
+        return look?.Kind switch
+        {
+            DaggerfallActorLookKind.Billboard => billboard,
+            DaggerfallActorLookKind.Townsperson => ActorVisualSpec.SplatCivilian(archive, record, npc.Appearance.Gender, look.SplatFor(gender) ?? castAssetId),
+            DaggerfallActorLookKind.Mobile => ActorVisualSpec.DirectionalMobile(look.MobileId!.Value, gender) with { CrowdCharacterHint = look.SplatFor(gender) },
+            _ => npc.Kind == DaggerfallNpcKind.Civilian
+                ? ActorVisualSpec.SplatCivilian(archive, record, npc.Appearance.Gender, crowdHint: castAssetId)
+                : billboard,
+        };
+    }
+
+    /// <summary>
+    /// How an actor made from <paramref name="definition"/> draws, as a <paramref name="gender"/> (a sprite key, or null
+    /// before it has one): in its content look, else the fallback, its classic mobile when it binds one, a townsperson's
+    /// splat character for a civilian, and its billboard otherwise.
+    /// </summary>
+    internal static ActorVisualSpec DefinitionVisual(DaggerfallActorDefinition definition, string? gender = null) => definition.Look switch
+    {
+        { Kind: DaggerfallActorLookKind.Billboard } => new(ActorVisualKind.Billboard, definition.Id.Value, Gender: gender),
+        { Kind: DaggerfallActorLookKind.Townsperson } look => new(ActorVisualKind.SplatCharacter, definition.Id.Value, Gender: gender, CrowdCharacterHint: look.SplatFor(gender)),
+        { Kind: DaggerfallActorLookKind.Mobile } look => ActorVisualSpec.DirectionalMobile(look.MobileId!.Value, gender) with { CrowdCharacterHint = look.SplatFor(gender) },
+        _ => definition.MobileId is int mobileId ? ActorVisualSpec.DirectionalMobile(mobileId, gender)
+            : definition.Kind == DaggerfallActorKinds.Civilian ? new(ActorVisualKind.SplatCharacter, definition.Id.Value, Gender: gender)
+            : new(ActorVisualKind.Billboard, definition.Id.Value, Gender: gender),
+    };
+
+    /// <summary>
+    /// Gives a definition actor its resolved <paramref name="gender"/> (a sprite key) and draws it as that gender in its
+    /// look, keeping the livery it wears.
+    /// </summary>
+    internal static void SetGender(Actor actor, DaggerfallActorDefinition definition, string gender)
+    {
+        if (actor.Has<DaggerfallActorGender>()) actor.Replace(new DaggerfallActorGender(gender));
+        else actor.Add(new DaggerfallActorGender(gender));
+        ActorRenderComponent render = actor.Get<ActorRenderComponent>();
+        render.SetVisual(DefinitionVisual(definition, gender) with { Tint = render.Spec.Tint, LiveryKey = render.Spec.LiveryKey });
     }
 
     private static string? ResolveCastVisualAssetId(DaggerfallNpc npc, DaggerfallDefinitions? definitions)
@@ -444,7 +497,7 @@ internal static class DaggerfallActorFactory
         RestoreStats(actor.Actor, saved.Stats);
         DaggerfallWabbajack.Restore(actor.Actor, saved.WabbajackActive ? saved.Definition : null);
         if (saved.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
-        if (saved.Gender is { } gender) actor.Actor.Add(new DaggerfallActorGender(gender));
+        if (saved.Gender is { } gender) SetGender(actor.Actor, definition, gender);
         SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
             definitions,
             definition,
@@ -468,12 +521,13 @@ internal static class DaggerfallActorFactory
                 definitions,
                 restoredNpc,
                 promotedGuard ? DaggerfallArchetypeIds.Guard : saved.PromotedArchetype);
-            ApplyNpcComponents(actor, restoredNpc, npcProfile, definitions);
-            if (promotedGuard && definition.MobileId is int watchMobile)
+            ApplyNpcComponents(actor, restoredNpc, npcProfile, definitions, ResolveNpcLook(definitions, restoredNpc, npcProfile, spawnerId: null));
+            if (promotedGuard && (definition.Look is not null || definition.MobileId is not null))
             {
+                // A promoted guard draws as the watch it became, in the watch definition's look.
                 actor.Actor.Get<FactionComponent>().SetCreatureFaction("city-watch");
-                actor.Actor.Get<ActorRenderComponent>().SetVisual(
-                    ActorVisualSpec.DirectionalMobile(watchMobile, saved.Gender ?? restoredNpc.Appearance.Gender));
+                actor.Actor.Get<ActorRenderComponent>().SetVisual(DefinitionVisual(definition, saved.Gender ?? ActorGenderFormat.SpriteKey(
+                    ActorGenderFormat.TryParse(restoredNpc.Appearance.Gender, out ActorGender watchGender) ? watchGender : ActorGender.Male)));
             }
         }
         DaggerfallEnemyPerceptionMemory dynMemory = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
@@ -547,12 +601,7 @@ internal static class DaggerfallActorFactory
         actor.Actor.Add(new ActorInteractionPolicy(interactionKind));
         actor.Actor.Add(new FactionComponent(creatureFactionId: definition.Team ?? (harmKind == ActorHarmPolicyKind.Combatant ? "player-enemy" : null)));
         actor.Actor.Add(new ActorOverlayComponent { ArchetypeId = definition.TemplateId ?? definition.Kind });
-        ActorVisualSpec visualSpec = definition.MobileId is int mobileId
-            ? ActorVisualSpec.DirectionalMobile(mobileId)
-            : definition.Kind == DaggerfallActorKinds.Civilian
-                ? new ActorVisualSpec(ActorVisualKind.SplatCharacter, definition.Id.Value)
-                : new ActorVisualSpec(ActorVisualKind.Billboard, definition.Id.Value);
-        actor.Actor.Add(new ActorRenderComponent(visualSpec));
+        actor.Actor.Add(new ActorRenderComponent(DefinitionVisual(definition)));
         SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(null, definition, durableId));
 
         if (definition.Kind == DaggerfallActorKinds.Civilian)

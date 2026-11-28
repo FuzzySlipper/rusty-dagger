@@ -70,6 +70,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private readonly Dictionary<string, RenderResource> packs = new(StringComparer.Ordinal);
     /// <summary>The characters that would not open, said once each; walkers wearing their art draw their sprites.</summary>
     private readonly HashSet<string> broken = new(StringComparer.Ordinal);
+    /// <summary>The characters a look named that the art set lacks, said once each.</summary>
+    private readonly HashSet<string> unknown = new(StringComparer.Ordinal);
     private bool unclothed;
     /// <summary>Whether walkers drawn in a long skirt walk at their walk's own pace, not the walkers': the tuning's until people.splat-pace.</summary>
     private bool slow = tuning.SkirtsSlow;
@@ -391,9 +393,11 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
             }
             if (render.Spec.Kind is not (ActorVisualKind.SplatCharacter or ActorVisualKind.PartsRig))
                 return null;
-            if (render.Spec.CrowdCharacterHint is { Length: > 0 } hint
-                && splats.Characters.ContainsKey(hint))
-                return (hint, render.Spec.Archive);
+            if (render.Spec.CrowdCharacterHint is { Length: > 0 } hint)
+            {
+                if (splats.Characters.ContainsKey(hint)) return (hint, render.Spec.Archive);
+                if (unknown.Add(hint)) warn($"No gsplat character '{hint}' is in the art set, so people whose look names it draw as their own art's.");
+            }
             if (render.Spec.Archive is int specArchive
                 && splats.ByArchive.TryGetValue(specArchive, out string? specId))
                 return (specId, specArchive);

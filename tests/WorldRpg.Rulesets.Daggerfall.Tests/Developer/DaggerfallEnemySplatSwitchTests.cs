@@ -50,7 +50,7 @@ public sealed class DaggerfallEnemySplatSwitchTests
         using DaggerfallEnemySplatSwitch sw = Switch(enemies, animation);
 
         // Mobile 135 (Warrior Male -> npc-466) draws gaussians by default.
-        Appearance? gaussians = sw.Show(200, 10, 135, "Male", "idle", 0, false, null, null);
+        Appearance? gaussians = sw.Show(200, 10, 135, "Male", null, "idle", 0, false, null, null);
         Assert.NotNull(gaussians);
         Assert.Equal([enemies.Characters["npc-466"].Bodies["gaussians"].Path], animation.OpenedPaths);
         sw.Publishing();
@@ -58,7 +58,7 @@ public sealed class DaggerfallEnemySplatSwitchTests
 
         // Switching to cards-core opens the cards-core GLB and disposes the superseded gaussians appearance after Settle.
         Assert.True(sw.EnemiesSplatVariant("cards-core").Succeeded);
-        Appearance? cardsCore = sw.Show(200, 10, 135, "Male", "idle", 0, false, null, null);
+        Appearance? cardsCore = sw.Show(200, 10, 135, "Male", null, "idle", 0, false, null, null);
         Assert.NotNull(cardsCore);
         Assert.NotSame(gaussians, cardsCore);
         Assert.Equal(enemies.Characters["npc-466"].Bodies["cards-core"].Path, animation.OpenedPaths[^1]);
@@ -71,7 +71,7 @@ public sealed class DaggerfallEnemySplatSwitchTests
 
         // enemies.splat off drops back to classic sprites (null) and releases the active instance (2 total including ReplaceInstance) & appearance.
         Assert.True(sw.EnemiesSplat("off").Succeeded);
-        Assert.Null(sw.Show(200, 10, 135, "Male", "idle", 0, false, null, null));
+        Assert.Null(sw.Show(200, 10, 135, "Male", null, "idle", 0, false, null, null));
         sw.Publishing();
         Assert.Equal(2, animation.ReleasedInstances);
         sw.Settle();
@@ -100,10 +100,10 @@ public sealed class DaggerfallEnemySplatSwitchTests
         Assert.Equal(("attack-sword", AnimationLoopMode.Once), (animation.Playbacks[^1].Clip, animation.Playbacks[^1].LoopMode));
 
         // Staff caster (mobile 128 Female -> npc-467) uses mage-idle and 2H staff attack-melee.
-        Assert.NotNull(sw.Show(201, 11, 128, "Female", "idle", 0, false, null, null));
+        Assert.NotNull(sw.Show(201, 11, 128, "Female", null, "idle", 0, false, null, null));
         sw.Publishing(); sw.Settle();
         Assert.Equal(("mage-idle", AnimationLoopMode.Repeat), (animation.Playbacks[^1].Clip, animation.Playbacks[^1].LoopMode));
-        Assert.NotNull(sw.Show(201, 11, 128, "Female", "primaryAttack", 1, false, null, null));
+        Assert.NotNull(sw.Show(201, 11, 128, "Female", null, "primaryAttack", 1, false, null, null));
         sw.Publishing(); sw.Settle();
         Assert.Equal(("attack-melee", AnimationLoopMode.Once), (animation.Playbacks[^1].Clip, animation.Playbacks[^1].LoopMode));
 
@@ -130,7 +130,7 @@ public sealed class DaggerfallEnemySplatSwitchTests
 
         void Step(ulong id, long actor, int mobileId, string state, uint seq, bool defeated)
         {
-            Assert.NotNull(sw.Show(id, actor, mobileId, "Male", state, seq, defeated, null, null));
+            Assert.NotNull(sw.Show(id, actor, mobileId, "Male", null, state, seq, defeated, null, null));
             sw.Publishing();
             sw.Settle();
         }
@@ -147,8 +147,8 @@ public sealed class DaggerfallEnemySplatSwitchTests
         // City Watch (mobile 146 -> npc-399) with two distinct liege livery tints creates two distinct appearances.
         Color blue = new(.2F, .4F, .9F, 1F);
         Color red = new(.9F, .2F, .2F, 1F);
-        Appearance? blueGuard = sw.Show(300, 20, 146, "Male", "idle", 0, false, blue, "daggerfall");
-        Appearance? redGuard = sw.Show(301, 21, 146, "Male", "idle", 0, false, red, "wayrest");
+        Appearance? blueGuard = sw.Show(300, 20, 146, "Male", null, "idle", 0, false, blue, "daggerfall");
+        Appearance? redGuard = sw.Show(301, 21, 146, "Male", null, "idle", 0, false, red, "wayrest");
         Assert.NotNull(blueGuard);
         Assert.NotNull(redGuard);
         Assert.NotSame(blueGuard, redGuard);
@@ -169,9 +169,32 @@ public sealed class DaggerfallEnemySplatSwitchTests
         Assert.False(sw.EnemiesSplatFade(0, 0, -.01).Succeeded);
     }
 
-    private static DaggerfallEnemySplatSwitch Switch(DaggerfallSplatEnemies enemies, AnimationRecorder animation) =>
+    /// <summary>
+    /// Den #11224: a look that names a splat character draws as it, whatever its mobile binds; one the art set lacks draws
+    /// the classic sprite and is said once.
+    /// </summary>
+    [Fact]
+    public void A_character_the_look_names_draws_in_place_of_the_mobiles_and_a_missing_one_falls_back_with_a_warning()
+    {
+        DaggerfallSplatEnemies enemies = Art().SplatEnemies!;
+        AnimationRecorder animation = AnimationRecorder.Create();
+        animation.Clips = Clips(enemies);
+        List<string> warnings = [];
+        using DaggerfallEnemySplatSwitch sw = Switch(enemies, animation, warnings.Add);
+
+        Assert.NotNull(sw.Show(400, 30, 143, "female", "npc-469", "idle", 0, false, null, null));
+        Assert.NotNull(sw.Show(401, 31, 146, "male", "npc-470", "idle", 0, false, null, null));
+        Assert.Equal(2, animation.OpenedPaths.Count);
+        Assert.All(animation.OpenedPaths, path => Assert.Matches("npc-4(69|70)", path));
+
+        Assert.Null(sw.Show(402, 32, 143, "male", "npc-orc", "idle", 0, false, null, null));
+        Assert.Null(sw.Show(403, 33, 143, "male", "npc-orc", "move", 0, false, null, null));
+        Assert.Single(warnings, warning => warning.Contains("npc-orc", StringComparison.Ordinal));
+    }
+
+    private static DaggerfallEnemySplatSwitch Switch(DaggerfallSplatEnemies enemies, AnimationRecorder animation, Action<string>? warn = null) =>
         new(enemies, Shipped(enemies), () => animation.Service, () => new ContentFake([]),
-            DaggerfallSplatPeopleTuning.Default, () => true, _ => { });
+            DaggerfallSplatPeopleTuning.Default, () => true, warn ?? (_ => { }));
 
     private static DaggerfallAnimations Shipped(DaggerfallSplatEnemies enemies)
     {

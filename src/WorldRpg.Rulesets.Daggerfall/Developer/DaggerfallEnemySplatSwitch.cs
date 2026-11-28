@@ -29,6 +29,8 @@ internal sealed class DaggerfallEnemySplatSwitch(
     private readonly Dictionary<(string Id, string Variant, string LiveryKey), (Appearance Appearance, EnemySplatFigure Figure, Color? Tint)> characters = [];
     private readonly Dictionary<string, RenderResource> packs = new(StringComparer.Ordinal);
     private readonly HashSet<(string Id, string Variant)> broken = [];
+    /// <summary>The characters a look named that the art set lacks, said once each.</summary>
+    private readonly HashSet<string> unknown = new(StringComparer.Ordinal);
     private (uint Grid, float Coverage, bool OwnPalette, float PoseRate, SplatShadowCaster Shadow, float FadeNear, float FadeFar, float SurfaceBias) look =
         (tuning.PixelGrid, tuning.PixelCoverage, tuning.OwnPalette, tuning.PoseRate, tuning.ShadowCaster, 0F, 0F, 0F);
     private EnemySplatCrowd? crowd;
@@ -38,10 +40,16 @@ internal sealed class DaggerfallEnemySplatSwitch(
     private bool yielded;
     private bool letGo;
 
-    public Appearance? Show(ulong id, long actor, int mobileId, string? gender, string state, uint actionSequence, bool defeated, Color? tint, string? liveryKey)
+    public Appearance? Show(ulong id, long actor, int mobileId, string? gender, string? character, string state, uint actionSequence, bool defeated, Color? tint, string? liveryKey)
     {
         if (yielded || !enabled || !refreshed() || splats is null || clips is null) return null;
-        string? resolvedId = forcedCharacter ?? splats.Resolve(mobileId, gender);
+        if (forcedCharacter is null && character is not null && !splats.Characters.ContainsKey(character))
+        {
+            if (unknown.Add(character))
+                warn($"No splat enemy '{character}' is in the art set, so actors whose look names it draw their classic sprites.");
+            return null;
+        }
+        string? resolvedId = forcedCharacter ?? character ?? splats.Resolve(mobileId, gender);
         if (resolvedId is null || !splats.Characters.TryGetValue(resolvedId, out DaggerfallSplatEnemy? enemy)) return null;
         string activeVariant = enemy.Bodies.ContainsKey(variant) ? variant : "gaussians";
         if (!enemy.Bodies.ContainsKey(activeVariant) || broken.Contains((resolvedId, activeVariant))) return null;

@@ -267,7 +267,6 @@ internal sealed class DaggerfallActorRoster
 
         string? npcGender = _npcs.TryGet(actorId, out DaggerfallNpc? npc) ? npc.Appearance.Gender : null;
         DaggerfallSiteProfile activeProfile = siteProfile ?? _profile();
-        NormalizedActorSprite? mobileSprite = activeProfile.MobileSprites.GetValueOrDefault(146);
         ActorInstanceIdentity watchIdentity = DaggerfallActorInstanceResolver.Resolve(
             _definitions,
             watchDef,
@@ -278,10 +277,9 @@ internal sealed class DaggerfallActorRoster
             regionIndex: activeProfile.Site?.Region);
         DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, watchIdentity);
         string gender = ActorGenderFormat.SpriteKey(watchIdentity.Gender);
-        if (actor.Actor.Has<DaggerfallActorGender>())
-            actor.Actor.Replace(new DaggerfallActorGender(gender));
-        else
-            actor.Actor.Add(new DaggerfallActorGender(gender));
+        ActorVisualSpec priorSpec = actor.Actor.Get<ActorRenderComponent>().Spec;
+        // The guard draws as the watch it becomes, in the watch definition's look, wearing the livery it wore.
+        DaggerfallActorFactory.SetGender(actor.Actor, watchDef, gender);
 
         _definitionsByActor[actorId] = watchDef;
         if (_dynamicActors.ContainsKey(actorId))
@@ -292,21 +290,15 @@ internal sealed class DaggerfallActorRoster
         actor.Actor.Get<ActorInteractionPolicy>().Set(guardProfile.DefaultInteraction);
         actor.Actor.Get<FactionComponent>().SetCreatureFaction("city-watch");
         actor.Actor.Get<ActorOverlayComponent>().ArchetypeId = guardProfile.Id;
-        ActorRenderComponent renderComp = actor.Actor.Get<ActorRenderComponent>();
-        ActorVisualSpec priorSpec = renderComp.Spec;
-        renderComp.SetVisual(ActorVisualSpec.DirectionalMobile(146, gender) with
-        {
-            Tint = priorSpec.Tint,
-            LiveryKey = priorSpec.LiveryKey,
-        });
         if (actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander))
             wander.MarkUnloaded();
 
-        if (swapAppearance && mobileSprite is not null)
+        if (swapAppearance && watchDef.DrawnMobileId is int watchMobile
+            && activeProfile.MobileSprites.TryGetValue(watchMobile, out NormalizedActorSprite? mobileSprite))
         {
             DaggerfallSiteAppearance appearance = siteAppearance ?? Appearance;
             appearance.RetireActor(actorId);
-            appearance.AddActor(actorId, mobileSprite.ForGender(gender), 146);
+            appearance.AddActor(actorId, mobileSprite.ForGender(gender), watchMobile);
             if (priorSpec.Tint is { } preservedTint)
                 appearance.SetActorTint(actorId, preservedTint);
         }
@@ -327,6 +319,7 @@ internal sealed class DaggerfallActorRoster
             || render.Spec.Kind != ActorVisualKind.DirectionalMobile
             || render.Spec.MobileId is not int mobileId)
             return false;
+        if (appearance.HasActor(actorId)) return true;
         if (profile.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
         {
             string gender = actor.Actor.TryGet<DaggerfallActorGender>(out DaggerfallActorGender? resolvedGender)
@@ -390,12 +383,12 @@ internal sealed class DaggerfallActorRoster
                 regionIndex: _profile().Site?.Region);
             DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, instanceIdentity);
             string resolvedGender = ActorGenderFormat.SpriteKey(instanceIdentity.Gender);
-            actor.Actor.Add(new DaggerfallActorGender(resolvedGender));
-            if (spawnedDefinition.MobileId is int mobileId)
+            DaggerfallActorFactory.SetGender(actor.Actor, spawnedDefinition, resolvedGender);
+            if (spawnedDefinition.DrawnMobileId is int mobileId)
             {
                 if (!_profile().MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Spawned actor '{spawnedDefinition.Id.Value}' has no admitted mobile {mobileId} presentation.");
-                Appearance.AddActor(durableId, sprite.ForGender(resolvedGender), definition.MobileId);
+                Appearance.AddActor(durableId, sprite.ForGender(resolvedGender), mobileId);
             }
             actor.Actor.Add(new ActorOriginComponent(
                 ActorOrigin.MintedActor(spawnedDefinition.Id.Value, spawnLevel, gender: resolvedGender),
@@ -584,7 +577,8 @@ internal sealed class DaggerfallActorRoster
                 MaterializeCivilian(npc, pose);
                 created = true;
             }
-            appearance.AdmitActor(id, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)), ActorVisualAssetId(id));
+            if (!TryAdmitDirectionalMobileAppearance(site, appearance, id))
+                appearance.AdmitActor(id, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)), ActorVisualAssetId(id));
             return id;
         }
         catch
@@ -645,6 +639,7 @@ internal sealed class DaggerfallActorRoster
             if (_actors.TryGet(npc.DurableId, out _))
             {
                 if (!appearance.HasActor(npc.DurableId)
+                    && !TryAdmitDirectionalMobileAppearance(active, appearance, npc.DurableId)
                     && active.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? existingSprite))
                     appearance.AdmitActor(npc.DurableId, existingSprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)), ActorVisualAssetId(npc.DurableId));
                 continue;
@@ -805,7 +800,7 @@ internal sealed class DaggerfallActorRoster
             ? (chosen.Archive, chosen.Record)
             : profile.BillboardSprites.Keys.First();
         string gender = chosenPool?.Gender is "Male" or "Female" ? chosenPool.Gender : "Male";
-        string race = _definitions.BuildingNames.TryGetNameBank(site.Region, out int bank) && bank != 0 ? "redguard" : "breton";
+        string race = spec.Race ?? (_definitions.BuildingNames.TryGetNameBank(site.Region, out int bank) && bank != 0 ? "redguard" : "breton");
         int factionId = interior.FactionId != 0
             ? interior.FactionId
             : spec.HireTerms?.GuildFactionId
@@ -1054,10 +1049,13 @@ internal sealed class DaggerfallActorRoster
         }
         DaggerfallSiteAppearance appearance = siteAppearance ?? _appearance();
         string? assetId = ActorVisualAssetId(id);
-        if (sourcePlacement is not null)
-            appearance.AdmitActor(id, sourcePlacement.Sprite, assetId);
-        else if (profile.BillboardSprites.TryGetValue((cast.Archive, cast.Record), out NormalizedBillboardSprite? sprite))
-            appearance.AdmitActor(id, sprite.Standing((cast.Archive, cast.Record)), assetId);
+        if (!TryAdmitDirectionalMobileAppearance(profile, appearance, id))
+        {
+            if (sourcePlacement is not null)
+                appearance.AdmitActor(id, sourcePlacement.Sprite, assetId);
+            else if (profile.BillboardSprites.TryGetValue((cast.Archive, cast.Record), out NormalizedBillboardSprite? sprite))
+                appearance.AdmitActor(id, sprite.Standing((cast.Archive, cast.Record)), assetId);
+        }
         _npcs.Bind(id, profile.ProfileKey);
         return id;
     }
@@ -1913,8 +1911,8 @@ internal sealed class DaggerfallActorRoster
             regionIndex: profile.Site?.Region);
         DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, mintedIdentity);
         string resolvedMintedGender = ActorGenderFormat.SpriteKey(mintedIdentity.Gender);
-        actor.Actor.Add(new DaggerfallActorGender(resolvedMintedGender));
-        if (spawnedDefinition.MobileId is int mobileId
+        DaggerfallActorFactory.SetGender(actor.Actor, spawnedDefinition, resolvedMintedGender);
+        if (spawnedDefinition.DrawnMobileId is int mobileId
             && profile.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
         {
             appearance.AddActor(durableId, sprite.ForGender(resolvedMintedGender), mobileId);
@@ -2438,14 +2436,14 @@ internal sealed class DaggerfallActorRoster
             if (prior is not null) actor.ApplyPose(new ActorPose(new WorldPoint(prior.X, prior.Y, prior.Z), prior.HeadingRadians));
             else if (_definitions.Walks(definition)) _grounding.Ground(actor);
             _definitionsByActor.Add(actor.DurableId, definition);
-            if (restoreAuthoredAppearance && definition.MobileId is int authoredMobile)
+            if (restoreAuthoredAppearance && definition.DrawnMobileId is int authoredMobile)
             {
                 if (!destination.MobileSprites.TryGetValue(authoredMobile, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored authored actor '{placement.EntityId}' has no admitted mobile {authoredMobile} presentation.");
                 string authoredGender = actor.Actor.TryGet<ActorInstanceIdentity>(out ActorInstanceIdentity? authoredIdentity)
                     ? ActorGenderFormat.SpriteKey(authoredIdentity.Gender)
                     : placement.Gender;
-                appearance.AddActor(actor.DurableId, sprite.ForGender(authoredGender), definition.MobileId);
+                appearance.AddActor(actor.DurableId, sprite.ForGender(authoredGender), authoredMobile);
             }
             if (prior is null) GrantStartingEquipment(actor, definition);
             if (prior?.WabbajackDefinition is not null && definition.MobileId is int changedMobile)
@@ -2489,7 +2487,7 @@ internal sealed class DaggerfallActorRoster
                     foreach (ActorVouchRecord vouch in retainedSocial.Vouches)
                         retainedOverlay.RecordVouch(vouch);
             }
-            if (projectAppearance && _definitionsByActor[saved.EntityId].MobileId is int mobileId)
+            if (projectAppearance && _definitionsByActor[saved.EntityId].DrawnMobileId is int mobileId)
             {
                 DaggerfallSiteProfile presentation = siteProfile ?? _profile();
                 if (!presentation.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))

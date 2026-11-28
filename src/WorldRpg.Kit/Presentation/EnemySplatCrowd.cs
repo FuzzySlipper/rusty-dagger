@@ -10,9 +10,10 @@ public interface IEnemySplatCrowd
 {
     /// <summary>
     /// The appearance object <paramref name="id"/> shows in the snapshot being built for enemy <paramref name="actor"/>,
-    /// or null when it should draw its classic sprite or corpse instead.
+    /// or null when it should draw its classic sprite or corpse instead: the splat <paramref name="character"/> its look
+    /// names, else the one its art binds to <paramref name="mobileId"/> and <paramref name="gender"/>.
     /// </summary>
-    Appearance? Show(ulong id, long actor, int mobileId, string? gender, string state, uint actionSequence, bool defeated, Color? tint, string? liveryKey);
+    Appearance? Show(ulong id, long actor, int mobileId, string? gender, string? character, string state, uint actionSequence, bool defeated, Color? tint, string? liveryKey);
 
     /// <summary>Before the snapshot is published: releases animation instances for enemies not in the snapshot.</summary>
     void Publishing();

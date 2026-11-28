@@ -594,7 +594,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             Appearance? rigged = !actor.IsDefeated && crowdVisual
                 ? peopleRigs()?.Show(id, actor.DurableId, visual.Sprite.Size.Y, walking) : null;
             Appearance? enemyRigged = rigged is null && render?.Spec.Kind == ActorVisualKind.DirectionalMobile && render.Spec.MobileId is int enemyMobileId
-                ? enemySplats()?.Show(id, actor.DurableId, enemyMobileId, render.Spec.Gender, visual.State, visual.ActionSequence, actor.IsDefeated, render.Spec.Tint, render.Spec.LiveryKey)
+                ? enemySplats()?.Show(id, actor.DurableId, enemyMobileId, render.Spec.Gender, render.Spec.CrowdCharacterHint, visual.State, visual.ActionSequence, actor.IsDefeated, render.Spec.Tint, render.Spec.LiveryKey)
                 : null;
             Appearance? chosen = rigged ?? enemyRigged ?? (actor.IsDefeated
                 ? DrawnCorpse(visual)

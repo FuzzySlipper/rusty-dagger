@@ -132,6 +132,10 @@ internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Ki
     internal ActorInteractionPolicyKind DefaultInteraction { get; init; } = ActorInteractionPolicyKind.None;
     internal ActorSpellPolicy SpellPolicy { get; init; } = ActorSpellPolicy.None;
     internal IReadOnlyList<string> Spells { get; init; } = [];
+    /// <summary>The look its spec or template gives it in content, or null for the factory's fallback.</summary>
+    internal DaggerfallActorLook? Look { get; init; }
+    /// <summary>The classic mobile it draws as: its look's, else the one its spec binds.</summary>
+    internal int? DrawnMobileId => Look?.MobileId ?? MobileId;
 }
 
 /// <summary>

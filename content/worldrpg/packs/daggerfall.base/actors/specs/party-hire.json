@@ -117,6 +117,14 @@
       "published": true,
       "displayName": "Orcish Sellsword",
       "role": "orc-sellsword",
+      "look": {
+        "kind": "mobile",
+        "mobileId": 143,
+        "splat": {
+          "male": "npc-470",
+          "female": "npc-469"
+        }
+      },
       "genders": [
         {
           "gender": "male",

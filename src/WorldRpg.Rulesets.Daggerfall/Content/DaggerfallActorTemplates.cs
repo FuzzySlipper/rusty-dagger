@@ -218,7 +218,8 @@ internal sealed record DaggerfallActorTemplateDefinition(
     int Magicka = 0,
     ActorHarmPolicyKind DefaultHarm = ActorHarmPolicyKind.Combatant,
     ActorInteractionPolicyKind DefaultInteraction = ActorInteractionPolicyKind.None,
-    bool Walks = true)
+    bool Walks = true,
+    DaggerfallActorLook? Look = null)
 {
     internal IReadOnlyList<string> EffectiveSpells => Spells ?? [];
 
@@ -281,6 +282,33 @@ internal sealed record DaggerfallPartyHireTerms(
     bool RequiresVouch,
     bool CanDelveDungeons);
 
+/// <summary>How a <see cref="DaggerfallActorLook"/> draws its actor.</summary>
+internal enum DaggerfallActorLookKind
+{
+    /// <summary>Stands as its billboard sprite.</summary>
+    Billboard,
+    /// <summary>Walks and stands as a townsperson splat character from the art pack's <c>splatPeople</c>, else its sprite.</summary>
+    Townsperson,
+    /// <summary>Moves, fights and falls as a classic mobile: its splat character from the art pack's <c>splatEnemies</c>, else its directional sprite.</summary>
+    Mobile,
+}
+
+/// <summary>
+/// The look content gives an actor (a template's <c>look</c>, which its specs inherit unless they state their own): how it
+/// draws, the classic mobile a <see cref="DaggerfallActorLookKind.Mobile"/> look draws as, and the art pack's splat
+/// character for each gender, where content names one. A gender it names none for takes the one its art binds: a
+/// townsperson's by its sprite's archive, a mobile's by its mobile id and gender. Without a look, the factory's fallback
+/// draws a walking townsperson as its splat character and anyone else as its sprite or mobile.
+/// </summary>
+internal sealed record DaggerfallActorLook(DaggerfallActorLookKind Kind, int? MobileId, IReadOnlyDictionary<ActorGender, string> Splats)
+{
+    /// <summary>The splat character content names for an actor of <paramref name="gender"/> (a sprite key or slug), or null.</summary>
+    internal string? SplatFor(string? gender) =>
+        ActorGenderFormat.TryParse(gender, out ActorGender parsed) && Splats.TryGetValue(parsed, out string? named) ? named
+        : string.Equals(gender, "unspecified", StringComparison.OrdinalIgnoreCase) && Splats.TryGetValue(ActorGender.Neutral, out string? neutral) ? neutral
+        : null;
+}
+
 /// <summary>
 /// Typed spawner instance spec describing how a template enters the world (art, gender split, race, naming,
 /// sound cues, faction/team, context policies, and optional classic binding).
@@ -329,7 +357,8 @@ internal sealed record DaggerfallActorSpawnerSpec(
     string? FamilyId = null,
     ActorSocialGrouping SocialGrouping = ActorSocialGrouping.None,
     string? VisualAssetId = null,
-    DaggerfallPartyHireTerms? HireTerms = null);
+    DaggerfallPartyHireTerms? HireTerms = null,
+    DaggerfallActorLook? Look = null);
 
 /// <summary>Primary placement posture of a named NPC schedule profile in <c>actors/schedules.json</c>.</summary>
 internal enum DaggerfallSchedulePrimaryMode
@@ -919,6 +948,7 @@ internal static partial class DaggerfallBaseContent
                     DefaultInteraction = spec.Interaction,
                     SpellPolicy = template.SpellPolicy,
                     Spells = template.EffectiveSpells,
+                    Look = spec.Look,
                 };
                 if (!actors.TryAdd(actorId, definition))
                     diagnostics.Add($"Duplicate actor definition '{actorId.Value}'.");
@@ -986,6 +1016,15 @@ internal static partial class DaggerfallBaseContent
                     mobilesByActor.TryAdd(spec.Id, mobile);
             }
         }
+
+        // A mobile look draws as a classic mobile, which a creature or enemy spec binds.
+        foreach ((string owner, DaggerfallActorLook? look) in resolvedTemplates.Values.Select(t => ($"Actor template '{t.Id}'", t.Look))
+            .Concat(specs.Values.Select(s => ($"Actor spawner spec '{s.Id}'", s.Look))))
+            if (look?.MobileId is int lookMobile && !mobiles.ContainsKey(lookMobile))
+                diagnostics.Add($"{owner} look names mobile {lookMobile}, which no spec binds.");
+        // A spec that binds a classic mobile has no billboard art of its own, so it draws as a mobile.
+        foreach (DaggerfallActorSpawnerSpec bound in specs.Values.Where(s => s.ClassicBinding is not null && s.Look is { Kind: not DaggerfallActorLookKind.Mobile }))
+            diagnostics.Add($"Actor spawner spec '{bound.Id}' binds classic mobile {bound.ClassicBinding!.MobileId}, so its look must be a mobile look.");
 
         DaggerfallActorCatalog catalog = new(
             new ReadOnlyDictionary<string, DaggerfallActorTemplateDefinition>(resolvedTemplates),
@@ -1323,7 +1362,54 @@ internal static partial class DaggerfallBaseContent
             magicka,
             defaultHarm,
             defaultInteraction,
-            walks);
+            walks,
+            ReadActorLook(el, $"Actor template '{id}'", diagnostics));
+    }
+
+    private static readonly HashSet<string> LookFields = new(["kind", "mobileId", "splat"], StringComparer.Ordinal);
+
+    /// <summary>Reads an owner's <c>look</c>: its kind, a mobile look's <c>mobileId</c>, and the splat character it names by gender.</summary>
+    private static DaggerfallActorLook? ReadActorLook(JsonElement owner, string context, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!owner.TryGetProperty("look", out JsonElement value) || value.ValueKind == JsonValueKind.Null) return null;
+        JsonElement look = Object(value, $"{context} look", diagnostics);
+        if (look.ValueKind != JsonValueKind.Object) return null;
+        foreach (JsonProperty field in look.EnumerateObject())
+            if (!LookFields.Contains(field.Name)) diagnostics.Add($"{context} look has unknown field '{field.Name}'.");
+        string kindText = Text(look, "kind", diagnostics);
+        DaggerfallActorLookKind? kind = kindText switch
+        {
+            "billboard" => DaggerfallActorLookKind.Billboard,
+            "townsperson" => DaggerfallActorLookKind.Townsperson,
+            "mobile" => DaggerfallActorLookKind.Mobile,
+            _ => null,
+        };
+        if (kind is null)
+        {
+            diagnostics.Add($"{context} look has unknown kind '{kindText}'; it is billboard, townsperson or mobile.");
+            return null;
+        }
+        int? mobileId = OptionalInteger(look, "mobileId", diagnostics);
+        if ((kind == DaggerfallActorLookKind.Mobile) != mobileId.HasValue)
+            diagnostics.Add($"{context} look must name a mobileId exactly when its kind is mobile.");
+        Dictionary<ActorGender, string> splats = [];
+        if (look.TryGetProperty("splat", out JsonElement splatValue) && splatValue.ValueKind != JsonValueKind.Null)
+        {
+            if (kind == DaggerfallActorLookKind.Billboard)
+                diagnostics.Add($"{context} look is a billboard, which draws its sprite and names no splat character.");
+            JsonElement named = Object(splatValue, $"{context} look splat", diagnostics);
+            if (named.ValueKind == JsonValueKind.Object)
+                foreach (JsonProperty entry in named.EnumerateObject())
+                {
+                    if (!ActorGenderFormat.TryParse(entry.Name, out ActorGender gender))
+                        diagnostics.Add($"{context} look splat names unknown gender '{entry.Name}'.");
+                    else if (entry.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(entry.Value.GetString()))
+                        diagnostics.Add($"{context} look splat '{entry.Name}' must name a splat character.");
+                    else
+                        splats[gender] = entry.Value.GetString()!;
+                }
+        }
+        return new(kind.Value, mobileId, splats.AsReadOnly());
     }
 
     private static Dictionary<string, DaggerfallActorScheduleProfile> ReadActorSchedules(
@@ -1821,7 +1907,8 @@ internal static partial class DaggerfallBaseContent
             familyId,
             socialGrouping,
             visualAssetId,
-            hireTerms);
+            hireTerms,
+            ReadActorLook(item, $"Actor spawner spec '{id}'", diagnostics) ?? template.Look);
     }
 
     private static IReadOnlyList<DaggerfallPeoplePoolEntry> ReadSpawnerPool(

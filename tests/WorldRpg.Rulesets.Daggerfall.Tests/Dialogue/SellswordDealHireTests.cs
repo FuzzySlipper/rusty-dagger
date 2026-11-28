@@ -77,6 +77,41 @@ public sealed class SellswordDealHireTests
         Assert.Contains(after.State.Npcs.All, npc => npc.Role == "road-guard");
     }
 
+    /// <summary>
+    /// Den #11224: the sellsword's spec gives it a look in content, a barbarian's splat by gender. It stands in the tavern
+    /// in it, keeps it hired beside the party, and after a reload, its classic mobile's sprite admitted beneath it.
+    /// </summary>
+    [Fact]
+    public void An_orc_sellsword_draws_in_its_specs_look_in_the_tavern_beside_the_party_and_after_a_reload()
+    {
+        using SourceBackedGuildBankSessionFixture fixture = SourceBackedGuildBankSessionFixture.Create();
+        DaggerfallSiteProfile tavern = fixture.AdmitProfile(CharingBuilding(15, faction: null));
+        using DaggerfallSession town = fixture.Start(tavern);
+        Offer(town, "orsinium", "daggerfall", "force:1/2", "coin:1/1");
+        using DaggerfallSession dealt = fixture.Restore(town.CaptureSave());
+        DaggerfallNpc orc = Assert.Single(dealt.State.Npcs.All, npc => npc.Role == "orc-sellsword" && npc.Presence == DaggerfallNpcPresence.Active);
+        AssertSellswordLook(dealt, orc);
+
+        dealt.State.Currency.ReceiveGold(500UL);
+        DaggerfallPartyHireResult hired = dealt.PartyHire.Resolve(orc, DaggerfallDialogueTopic.HireCompanion);
+        Assert.True(hired.Accepted, hired.Message);
+        AssertSellswordLook(dealt, orc);
+
+        using DaggerfallSession restored = fixture.Restore(dealt.CaptureSave());
+        Assert.True(restored.PartyHire.TryGetStagedHiredRole(orc.DurableId, out _));
+        AssertSellswordLook(restored, orc);
+    }
+
+    private static void AssertSellswordLook(DaggerfallSession session, DaggerfallNpc orc)
+    {
+        ActorVisualSpec look = session.State.Actors.Get(orc.DurableId).Actor.Get<ActorRenderComponent>().Spec;
+        string gender = orc.Appearance.Gender.ToLowerInvariant();
+        Assert.Equal((ActorVisualKind.DirectionalMobile, (int?)143, gender, gender == "female" ? "npc-469" : "npc-470"),
+            (look.Kind, look.MobileId, look.Gender, look.CrowdCharacterHint));
+        NormalizedActorSprite drawn = Assert.IsType<NormalizedActorSprite>(session.ActiveAppearance.SpriteFor(orc.DurableId));
+        Assert.Contains("primaryAttack", drawn.States.Keys);
+    }
+
     [Fact]
     public void The_fighters_guilds_deal_sends_mercenaries_to_its_halls_and_a_hire_keeps_its_terms_after_the_deal_through_a_save()
     {
