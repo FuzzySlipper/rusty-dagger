@@ -138,8 +138,10 @@ internal sealed class DaggerfallRationConvoys(
 
     /// <summary>
     /// The scene staged the convoy on band <paramref name="bandId"/> met on the map, its people among
-    /// <paramref name="primary"/> and its raiders <paramref name="rivals"/>: each takes the side the player chose against
-    /// or beside them. Its guards fight beside a defender and against a raider; its raiders beside one who joined them.
+    /// <paramref name="primary"/> and its raiders <paramref name="rivals"/>, once as it is entered and again as late
+    /// raiders find room: each takes the side the player stands on with them, which is the side chosen unless the player
+    /// has since struck it. Its guards fight beside a defender who has not struck the convoy and against anyone else who
+    /// raids it; its raiders fight beside one who joined them and has not struck them.
     /// </summary>
     internal void Staged(string bandId, IReadOnlyList<long> primary, IReadOnlyList<long> rivals)
     {
@@ -148,19 +150,15 @@ internal sealed class DaggerfallRationConvoys(
         _convoys[bandId] = convoy = convoy with { Side = side, Raiders = [.. (convoy.Raiders ?? []).Union(rivals)] };
         long[] guards = [.. convoy.Guards.Where(primary.Contains)];
         foreach (long guard in guards) _fight.Arm(guard);
-        switch (side)
-        {
-            case DaggerfallConvoySide.Defend:
-                foreach (long guard in guards) _fight.Ally(guard);
-                break;
-            case DaggerfallConvoySide.JoinRaiders:
-                foreach (long raider in rivals) _fight.Ally(raider);
-                foreach (long guard in guards) _fight.Foe(guard);
-                break;
-            case DaggerfallConvoySide.Raid:
-                foreach (long guard in guards) _fight.Foe(guard);
-                break;
-        }
+        bool guardsHostile = side is DaggerfallConvoySide.JoinRaiders or DaggerfallConvoySide.Raid || convoy.StruckConvoy;
+        if (guardsHostile)
+            foreach (long guard in guards) _fight.Foe(guard);
+        else if (side == DaggerfallConvoySide.Defend)
+            foreach (long guard in guards) _fight.Ally(guard);
+        if (side == DaggerfallConvoySide.JoinRaiders)
+            foreach (long raider in rivals)
+                if (convoy.StruckRaiders) _fight.Foe(raider);
+                else _fight.Ally(raider);
     }
 
     /// <summary>

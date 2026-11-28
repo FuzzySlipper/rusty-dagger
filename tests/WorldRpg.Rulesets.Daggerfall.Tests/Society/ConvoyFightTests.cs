@@ -22,7 +22,7 @@ public sealed class ConvoyFightTests
 
     [Theory]
     [InlineData("Defend", "arm:102 arm:103 ally:102 ally:103", true)]
-    [InlineData("JoinRaiders", "arm:102 arm:103 ally:201 ally:202 foe:102 foe:103", false)]
+    [InlineData("JoinRaiders", "arm:102 arm:103 foe:102 foe:103 ally:201 ally:202", false)]
     [InlineData("Raid", "arm:102 arm:103 foe:102 foe:103", false)]
     [InlineData("Approach", "arm:102 arm:103", true)]
     public void Each_side_stages_the_convoys_guards_and_raiders_with_or_against_the_player(string sideName, string staged, bool lawful)
@@ -82,6 +82,52 @@ public sealed class ConvoyFightTests
 
         Assert.Equal(["foe:201", "foe:202"], fight.Sides);
         Assert.True(convoys.All.Single().StruckRaiders);
+    }
+
+    [Fact]
+    public void Raiders_who_find_room_late_take_the_side_the_player_stands_on_since_striking_it()
+    {
+        // Joined the raiders, then struck one: a raider staged later, and those staged again with it, stay hostile.
+        (DaggerfallRationConvoys joined, Fight joining) = Convoys();
+        joined.Choose(Band, DaggerfallConvoySide.JoinRaiders);
+        joined.Staged(Band, [Drover, GuardA, GuardB], [Raider]);
+        joined.Struck(Raider);
+        joining.Sides.Clear();
+        joined.Staged(Band, [Drover, GuardA, GuardB], [Raider, Raider2]);
+        Assert.Equal("arm:102 arm:103 foe:102 foe:103 foe:201 foe:202", string.Join(' ', joining.Sides));
+
+        // Defended, then struck a guard: staged again, the guards stay hostile.
+        (DaggerfallRationConvoys defended, Fight defending) = Convoys();
+        defended.Choose(Band, DaggerfallConvoySide.Defend);
+        defended.Staged(Band, [Drover, GuardA, GuardB], [Raider]);
+        defended.Struck(GuardA);
+        defending.Sides.Clear();
+        defended.Staged(Band, [Drover, GuardA, GuardB], [Raider, Raider2]);
+        Assert.Equal("arm:102 arm:103 foe:102 foe:103", string.Join(' ', defending.Sides));
+
+        // Approached quietly, then struck the drover: its guards come on as foes.
+        (DaggerfallRationConvoys approached, Fight approaching) = Convoys();
+        approached.Staged(Band, [Drover, GuardA, GuardB], []);
+        approached.Struck(Drover);
+        approaching.Sides.Clear();
+        approached.Staged(Band, [Drover, GuardA, GuardB], [Raider]);
+        Assert.Equal("arm:102 arm:103 foe:102 foe:103", string.Join(' ', approaching.Sides));
+    }
+
+    [Fact]
+    public void A_raid_chosen_on_the_map_is_a_crime_in_the_region_the_party_stands_in()
+    {
+        using DaggerfallSession session = FreshSession();
+        (string bandId, _) = SendConvoy(session);
+        int sceneRegion = session.Site.ActiveSite!.Region;
+        DaggerfallSiteRecord away = TestPayload.Definitions.Locations.Records.First(record => record.Region != sceneRegion
+            && session.Expedition.Policy.RegionAt(new(record.MapPixelX, record.MapPixelY)) == record.Region);
+        session.Expedition.Begin(new(away.MapPixelX, away.MapPixelY), aboardOwnShip: false);
+
+        Assert.True(session.RationConvoys.Choose(bandId, DaggerfallConvoySide.Raid));
+
+        DaggerfallCrimeIncidentSave raid = Assert.Single(session.State.Crime.Incidents, incident => incident.OperationId == $"convoy-raid:{bandId}");
+        Assert.Equal(away.Region, raid.Region);
     }
 
     [Fact]

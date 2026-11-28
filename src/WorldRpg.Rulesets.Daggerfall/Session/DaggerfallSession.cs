@@ -1038,11 +1038,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>
     /// The player raided a convoy (#11181): the theft of its grain is a crime in the region they are in, reported by its
-    /// people, and costs standing with its giver and receiver, a loss the seats hostile to them welcome.
+    /// people, and costs standing with its giver and receiver, a loss the seats hostile to them welcome. A raid chosen on
+    /// the travel map falls in the region of the party's pixel, not that of the scene the map was opened from.
     /// </summary>
     void IDaggerfallConvoyFight.Raided(DaggerfallRationConvoySave convoy)
     {
-        int region = _site.ActiveSite?.Region ?? convoy.Origin.Require().Region;
+        int region = Expedition.Open && Expedition.Policy.RegionAt(Expedition.Party) is >= 0 and int mapRegion
+            ? mapRegion
+            : _site.ActiveSite?.Region ?? convoy.Origin.Require().Region;
         Crimes.ReportConvoyRaid($"convoy-raid:{convoy.BandId}", region, convoy.Riders);
         foreach (string seat in new[] { convoy.Giver, convoy.Receiver })
             if (_definitions.BoardSeats.TryGetBySeatId(seat, out DaggerfallBoardSeatBinding? binding) && binding is not null)
